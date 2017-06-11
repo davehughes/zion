@@ -762,21 +762,6 @@ bool test_utf8() {
 	}
 }
 
-bool test_tk_char_to_char() {
-	struct {
-		std::string test;
-		char expect;
-	} tests[] = {
-		{"'n'", 'n'},
-	};
-	for (auto &test : tests) {
-		if (tk_char_to_char(test.test) != test.expect) {
-			return false;
-		}
-	}
-	return true;
-}
-
 using test_func = std::function<bool ()>;
 
 struct test_desc {
@@ -878,7 +863,6 @@ auto test_descs = std::vector<test_desc>{
 
 	T(test_string_stuff),
 	T(test_utf8),
-	T(test_tk_char_to_char),
 
 	T(test_lex_comments),
 	T(test_lex_dependency_keywords),

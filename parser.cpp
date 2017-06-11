@@ -1066,9 +1066,10 @@ ptr<function_defn_t> function_defn_t::parse(parse_state_t &ps) {
 ptr<module_decl_t> module_decl_t::parse(parse_state_t &ps, bool skip_module_token) {
 	if (!skip_module_token) {
 		chomp_token(tk_module);
+	} else {
+		/* we've skipped the check for the 'module' token */
 	}
 
-	/* we've skipped the check for the 'module' token */
 	auto module_decl = create<ast::module_decl_t>(ps.token);
 
 	expect_token(tk_identifier);
@@ -1678,12 +1679,11 @@ ptr<module_t> module_t::parse(parse_state_t &ps, bool global) {
 	auto module_decl = module_decl_t::parse(ps);
 
 	if (module_decl != nullptr) {
-		atom module_name = strip_zion_extension(ps.filename.str());
 		ps.module_id = make_iid(module_decl->get_canonical_name());
 		assert(ps.module_id != nullptr);
 
 		auto module = create<ast::module_t>(ps.token, ps.filename, global);
-		module->decl.swap(module_decl);
+		module->decl = module_decl;
 
 		// Get links
 		while (ps.token.tk == tk_link) {
