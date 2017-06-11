@@ -54,7 +54,7 @@ expr           ::= assignment
 assignment     ::= ternary_expr (( '=' | ':=' | '+=' | '-=' | '\*=' | '/=' | '%=' ) ternary_expr)?
 
 tuple_expr     ::= ternary_expr ( ',' | ( ',' ternary_expr )* )
-ternary_expr   ::= or_expr ( '?' or_expr ':' or_expr )
+ternary_expr   ::= or_expr ( '?' or_expr ':' or_expr )?
 or_expr        ::= and_expr ( 'or' and_expr )*
 and_expr       ::= eq_expr ( 'and' eq_expr )*
 

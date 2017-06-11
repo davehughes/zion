@@ -199,34 +199,6 @@ void ensure_space_before(token_kind prior_tk) {
 	}
 }
 
-char tk_char_to_char(const std::string &token_text) {
-	assert(token_text[0] == '\'');
-	assert(token_text[token_text.size() - 1] == '\'');
-	assert(token_text.size() == 3 || token_text.size() == 4);
-	char val = token_text[1];
-	if (val == '\\') {
-		char val = token_text[2];
-		switch (val) {
-		case 'b':
-			val = '\b';
-			break;
-		case 'f':
-			val = '\f';
-			break;
-		case 'n':
-			val = '\n';
-			break;
-		case 'r':
-			val = '\r';
-			break;
-		case 't':
-			val = '\t';
-			break;
-		}
-	}
-	return val;
-}
-
 void ensure_indented_line(bool &indented_line, int indent_level) {
 	if (!indented_line) {
 		indented_line = true;

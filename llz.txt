@@ -1,0 +1,39 @@
+Low-Level Zion (.llz)
+
+- variables
+  - var
+  - const
+  - uninitialized variables are set to zero
+- types
+  - built-in types
+    - __void__
+    - __int1__
+    - __int8__
+    - __uint8__
+    - __int16__
+    - __uint16__
+    - __int32__
+    - __uint32__
+    - __int64__
+    - __uint64__
+    - __utf8__
+    - __float32__
+    - __float64__
+  - user defined types
+    - function "fn (var1 type2, var2 type2, ...) return_type
+    - struct
+    - polymorph
+  - pointers
+- automatic reference counting memory management
+- looping
+  - loop - no conditions
+  - break
+  - continue
+- conditional branching
+  - if conditions must be integer types or pointer typed variable references
+  - else branches must exist
+- matching
+  - match variable
+  - variable takes type within match
+  - default branch
+  - all cases must be handled (or default must exist)

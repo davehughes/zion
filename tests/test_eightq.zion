@@ -66,4 +66,4 @@ def append_if_not_under_attack(new_solutions [[Pos]], col, row, solutions [[Pos]
 
 def main() __int__
 	print(iter_solve(8))
-	return (0).raw
+	return 0r

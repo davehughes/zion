@@ -123,4 +123,3 @@ struct zion_token_t {
 
 const char *tkstr(token_kind tk);
 void emit_tokens(const std::vector<zion_token_t> &tokens);
-char tk_char_to_char(const std::string &token_text);
