@@ -341,9 +341,13 @@ bool test_lex_floats() {
 bool test_llz_lex_types() {
 	llz_lexer_tests tests = {
 		{"type x struct {x X y Y }", {
-										  lltk_type, lltk_identifier, lltk_struct,
-									 lltk_lcurly, lltk_identifier, lltk_identifier,
-									 lltk_identifier, lltk_identifier, lltk_rcurly}},
+			lltk_type, lltk_identifier, lltk_struct,
+			lltk_lcurly, lltk_identifier, lltk_identifier,
+			lltk_identifier, lltk_identifier, lltk_rcurly}},
+		{"type \"List{int}\" polymorph match :\r\n  ; *", {
+			lltk_type, lltk_string, lltk_polymorph,
+			lltk_match, lltk_colon, lltk_semicolon,
+			lltk_star}},
 	};
 	return llz_lexer_test(tests);
 }
