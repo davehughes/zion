@@ -6,8 +6,7 @@
 
 typedef stackstring_t<(1024 * 4) - sizeof(char) - sizeof(size_t)> zion_string_t;
 
-enum llz_token_kind_t
-{
+enum llz_token_kind_t {
 	lltk_none, /* NULL TOKEN */
 	lltk_comment, /* # hey */
 	lltk_identifier, /* identifier */
@@ -29,13 +28,16 @@ enum llz_token_kind_t
 	lltk_const, /* const */
 	lltk_return, /* return */
 
+	lltk_struct, /* struct */
+	lltk_polymorph, /* polymorph */
+
 	// Literals
 	lltk_char, /* char literal */
 	lltk_float, /* 3.1415e20 */
 	lltk_integer, /* [0-9]+ */
 	lltk_string, /* "string literal" */
 
-	// Flow control
+	lltk_line, /* line */
 	lltk_if, /* if */
 	lltk_else, /* else */
 	lltk_loop, /* loop */

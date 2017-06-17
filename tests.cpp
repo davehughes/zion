@@ -16,6 +16,7 @@
 #include "llvm_test.h"
 #include "llvm_utils.h"
 #include "unification.h"
+#include "llz_lexer.h"
 
 #define test_assert(x) if (!(x)) { \
 	log(log_error, "test_assert " c_error(#x) " failed at " c_line_ref("%s:%d"), __FILE__, __LINE__); \
@@ -35,8 +36,21 @@ std::vector<token_kind> get_tks(zion_lexer_t &lexer, bool include_newlines, std:
 	return tks;
 }
 
+std::vector<llz_token_kind_t> get_lltks(llz_lexer_t &lexer, std::vector<llz_token_t> &comments) {
+	std::vector<llz_token_kind_t> lltks;
+	llz_token_t token;
+	while (lexer.get_token(token, &comments)) {
+		lltks.push_back(token.lltk);
+	}
+	return lltks;
+}
+
 const char *to_str(token_kind tk) {
 	return tkstr(tk);
+}
+
+const char *to_str(llz_token_kind_t lltk) {
+	return lltkstr(lltk);
 }
 
 template <typename T>
@@ -92,6 +106,19 @@ bool check_lexer(std::string text, std::vector<token_kind> expect_tks, bool incl
 	return true;
 }
 
+bool llz_check_lexer(std::string text, std::vector<llz_token_kind_t> expect_lltks, std::vector<llz_token_t> &comments) {
+	std::istringstream iss(text);
+	llz_lexer_t lexer("llz_check_lexer", iss);
+	std::vector<llz_token_kind_t> result_lltks = get_lltks(lexer, comments);
+	if (!check_tks_match(expect_lltks, result_lltks)) {
+		log(log_info, "for text: '%s'", text.c_str());
+		log_list(log_info, "expected", expect_lltks);
+		log_list(log_info, "got     ", result_lltks);
+		return false;
+	}
+	return true;
+}
+
 struct lexer_test_t {
 	std::string text;
 	std::vector<token_kind> tks;
@@ -112,6 +139,23 @@ bool lexer_test(const lexer_tests &tests, bool include_newlines=false) {
 	std::vector<zion_token_t> comments;
 	for (auto &test : tests) {
 		if (!check_lexer(test.text, test.tks, include_newlines, comments)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+struct llz_lexer_test_t {
+	std::string text;
+	std::vector<llz_token_kind_t> lltks;
+};
+
+typedef std::vector<llz_lexer_test_t> llz_lexer_tests;
+
+bool llz_lexer_test(const llz_lexer_tests &tests, bool include_newlines=false) {
+	std::vector<llz_token_t> comments;
+	for (auto &test : tests) {
+		if (!llz_check_lexer(test.text, test.lltks, comments)) {
 			return false;
 		}
 	}
@@ -292,6 +336,16 @@ bool test_lex_floats() {
 		{"h(3.14159265r)", {tk_identifier, tk_lparen, tk_raw_float, tk_rparen}},
 	};
 	return lexer_test(tests);
+}
+
+bool test_llz_lex_types() {
+	llz_lexer_tests tests = {
+		{"type x struct {x X y Y }", {
+										  lltk_type, lltk_identifier, lltk_struct,
+									 lltk_lcurly, lltk_identifier, lltk_identifier,
+									 lltk_identifier, lltk_identifier, lltk_rcurly}},
+	};
+	return llz_lexer_test(tests);
 }
 
 bool test_lex_types() {
@@ -875,6 +929,7 @@ auto test_descs = std::vector<test_desc>{
 	T(test_lex_syntax),
 	T(test_lex_floats),
 	T(test_lex_types),
+	T(test_llz_lex_types),
 
 	{
 		"test_type_algebra",
