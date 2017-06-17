@@ -21,6 +21,7 @@ enum llz_token_kind_t
 	lltk_lsquare, /* [ */
 	lltk_rsquare, /* ] */
 	lltk_colon, /* : */
+	lltk_dot, /* . */
 	lltk_semicolon, /* ; */
 	lltk_type, /* type */
 	lltk_fn, /* fn */
@@ -44,7 +45,6 @@ enum llz_token_kind_t
 
 	// Operators
 	lltk_assign,  /* = */
-	lltk_becomes, /* := */
 	lltk_star,    /* * */
 
 	// Dependency tokens

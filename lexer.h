@@ -8,16 +8,10 @@
 #define debug_lexer(x)
 #endif
 
-struct token_pair
-{
-	token_kind tk;
-	std::string text;
-};
-
 class zion_lexer_t
 {
 public:
-	zion_lexer_t(atom filename, std::istream &sock_is);
+	zion_lexer_t(atom filename, std::istream &is);
 	~zion_lexer_t();
 
 	bool get_token(zion_token_t &token, bool &newline, std::vector<zion_token_t> *comments);

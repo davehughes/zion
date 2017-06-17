@@ -18,8 +18,8 @@ bool all(const T &xs, U u) {
 	return true;
 }
 
-zion_lexer_t::zion_lexer_t(atom filename, std::istream &sock_is)
-	: m_filename(filename), m_is(sock_is), m_last_indent_depth(0)
+zion_lexer_t::zion_lexer_t(atom filename, std::istream &is)
+	: m_filename(filename), m_is(is), m_last_indent_depth(0)
 {
 }
 

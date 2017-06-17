@@ -2597,8 +2597,6 @@ bound_var_t::ref ast::return_statement_t::resolve_instantiation(
 			}
 			debug_above(8, log("emitting a return of %s", llvm_print(llvm_return_value).c_str()));
 
-			// TODO: release live variables in scope, except the one being
-			// returned
 			builder.CreateRet(llvm_return_value);
 		} else {
 			assert(types::is_type_id(return_type->get_type(), "void"));
