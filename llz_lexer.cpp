@@ -97,6 +97,12 @@ bool llz_lexer_t::get_token(
 			}
 			break;
 		case gts_start:
+			scan_ahead = true;
+			token_text.reset();
+			line = m_line;
+			col = m_col;
+			sequence_length = 0;
+
 			switch (ch) {
 			case '*':
 				gts = gts_end;
@@ -338,11 +344,16 @@ bool llz_lexer_t::get_token(
 
 	if (gts != gts_error) {
 		if (lltk != lltk_none) {
+			lltk = translate_lltk(lltk, token_text);
+			debug_above(12, log(log_info, "got llz token %s %s",
+						lltkstr(lltk), token_text.c_str()));
+
 			token = llz_token_t({m_filename, line, col}, lltk, token_text.str());
 		}
 
 		if (ch == EOF) {
 			token = llz_token_t({m_filename, line, col}, lltk_none, token_text.str());
+			return false;
 		}
 
 		return true;

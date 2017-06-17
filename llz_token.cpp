@@ -25,9 +25,9 @@ const char *lltkstr(llz_token_kind_t lltk) {
 	lltk_case(colon);
 	lltk_case(comma);
 	lltk_case(comment);
-	lltk_case(dot);
 	lltk_case(const);
 	lltk_case(continue);
+	lltk_case(dot);
 	lltk_case(else);
 	lltk_case(float);
 	lltk_case(fn);
@@ -35,12 +35,14 @@ const char *lltkstr(llz_token_kind_t lltk) {
 	lltk_case(if);
 	lltk_case(integer);
 	lltk_case(lcurly);
+	lltk_case(line);
 	lltk_case(link);
 	lltk_case(loop);
 	lltk_case(lparen);
 	lltk_case(lsquare);
 	lltk_case(match);
 	lltk_case(none);
+	lltk_case(polymorph);
 	lltk_case(program);
 	lltk_case(rcurly);
 	lltk_case(return);
@@ -49,10 +51,44 @@ const char *lltkstr(llz_token_kind_t lltk) {
 	lltk_case(semicolon);
 	lltk_case(star);
 	lltk_case(string);
+	lltk_case(struct);
 	lltk_case(type);
 	lltk_case(var);
 	}
 	return "";
+}
+
+llz_token_kind_t translate_lltk(llz_token_kind_t llztk, const zion_string_t &token_text) {
+	struct token_matcher {
+		std::string text;
+		llz_token_kind_t lltk;
+	};
+
+	static const auto token_matchers = std::vector<token_matcher>{
+		{"break", lltk_break},
+		{"const", lltk_const},
+		{"continue", lltk_continue},
+		{"else", lltk_else},
+		{"fn", lltk_fn},
+		{"if", lltk_if},
+		{"line", lltk_line},
+		{"loop", lltk_loop},
+		{"match", lltk_match},
+		{"polymorph", lltk_polymorph},
+		{"return", lltk_return},
+		{"struct", lltk_struct},
+		{"type", lltk_type},
+		{"var", lltk_var},
+	};
+
+	if (llztk == lltk_identifier) {
+		for (auto &tm : token_matchers) {
+			if (token_text == tm.text.c_str()) {
+				return tm.lltk;
+			}
+		}
+	}
+	return llztk;
 }
 
 void llz_token_t::emit(int &indent_level, llz_token_kind_t &last_tk, bool &indented_line) {
@@ -65,6 +101,15 @@ void llz_token_t::emit(int &indent_level, llz_token_kind_t &last_tk, bool &inden
 	   	break;
 	case lltk_comment:
 		printf("# %s\n", text.c_str());
+		break;
+	case lltk_line:
+		printf("line");
+		break;
+	case lltk_struct:
+		printf("struct");
+		break;
+	case lltk_polymorph:
+		printf("polymorph");
 		break;
 	case lltk_identifier:
 		printf("%s", text.c_str());

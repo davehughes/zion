@@ -22,3 +22,5 @@ private:
 	std::istream  &m_is;
 	int            m_line=1, m_col=1;
 };
+
+llz_token_kind_t translate_lltk(llz_token_kind_t llztk, const zion_string_t &token_text);
