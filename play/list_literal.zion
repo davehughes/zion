@@ -1,0 +1,6 @@
+module _
+
+def main()
+	# g := list(2, list(3, list(4, nil)))
+	g := [2, 3, 4]
+	print(g)

@@ -80,6 +80,7 @@ add_executable(zionc
 	status.cpp
 	tests.cpp
 	token.cpp
+	llz_lexer.cpp
 	llz_token.cpp
 	token_queue.cpp
 	type_checker.cpp

@@ -20,12 +20,12 @@ std::string llz_token_t::str() const {
 const char *lltkstr(llz_token_kind_t lltk) {
 	switch (lltk) {
 	lltk_case(assign);
-	lltk_case(becomes);
 	lltk_case(break);
 	lltk_case(char);
 	lltk_case(colon);
 	lltk_case(comma);
 	lltk_case(comment);
+	lltk_case(dot);
 	lltk_case(const);
 	lltk_case(continue);
 	lltk_case(else);
@@ -68,6 +68,9 @@ void llz_token_t::emit(int &indent_level, llz_token_kind_t &last_tk, bool &inden
 		break;
 	case lltk_identifier:
 		printf("%s", text.c_str());
+		break;
+	case lltk_dot:
+		printf(".");
 		break;
 	case lltk_lparen:
 		printf("(");
@@ -149,9 +152,6 @@ void llz_token_t::emit(int &indent_level, llz_token_kind_t &last_tk, bool &inden
 	// Operators
 	case lltk_assign:
 		printf("assign");
-		break;
-	case lltk_becomes:
-		printf("becomes");
 		break;
 	case lltk_star:
 		printf("star");
