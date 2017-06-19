@@ -53,7 +53,7 @@ program_scope_t::ref compiler_t::get_program_scope() const {
 	return program_scope;
 }
 
-std::vector<zion_token_t> compiler_t::get_comments() const {
+std::vector<token_t> compiler_t::get_comments() const {
 	return comments;
 }
 
@@ -168,7 +168,7 @@ ast::module_t::ref compiler_t::build_parse(
 
 				if (ifs.good()) {
 					debug_above(4, log(log_info, "parsing module \"%s\"", module_filename.c_str()));
-					zion_lexer_t lexer({module_filename}, ifs);
+					lexer_t lexer({module_filename}, ifs);
 
 					assert_implies(global, global_type_macros.size() == base_type_macros.size());
 

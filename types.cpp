@@ -845,7 +845,7 @@ types::type_t::pair make_type_pair(std::string fst, std::string snd, identifier:
 types::type_t::ref parse_type_expr(std::string input, identifier::set generics, identifier::ref module_id) {
 	status_t status;
 	std::istringstream iss(input);
-	zion_lexer_t lexer("", iss);
+	lexer_t lexer("", iss);
 	parse_state_t ps(status, "", lexer, {}, nullptr);
 	if (module_id != nullptr) {
 		ps.module_id = module_id;

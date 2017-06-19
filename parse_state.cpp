@@ -7,9 +7,9 @@
 parse_state_t::parse_state_t(
 		status_t &status,
 		std::string filename,
-		zion_lexer_t &lexer,
+		lexer_t &lexer,
 		std::map<atom, ptr<const types::type_t>> type_macros,
-		std::vector<zion_token_t> *comments) :
+		std::vector<token_t> *comments) :
 	filename(filename),
 	lexer(lexer),
 	status(status),
@@ -22,7 +22,7 @@ parse_state_t::parse_state_t(
 bool parse_state_t::advance() {
 	debug_lexer(log(log_info, "advanced from %s %s", tkstr(token.tk), token.text.c_str()[0] != '\n' ? token.text.c_str() : ""));
 	prior_token = token;
-	return lexer.get_token(token, newline, comments);
+	return lexer.get_token(token, comments);
 }
 
 void parse_state_t::warning(const char *format, ...) {

@@ -6,8 +6,8 @@
 #include "parse_state.h"
 
 template <typename T, typename... Args>
-ptr<T> parse_text(std::istream &is, std::string filename = "repl.zion") {
-	zion_lexer_t lexer(filename, is);
+ptr<T> parse_text(std::istream &is, std::string filename = "repl.llz") {
+	lexer_t lexer(filename, is);
 	status_t status;
 	parse_state_t ps(status, filename, lexer, {});
 	ps.module_id = make_iid("__parse_text__");
@@ -21,18 +21,7 @@ ptr<T> parse_text(std::istream &is, std::string filename = "repl.zion") {
 }
 
 template <typename T, typename... Args>
-ptr<T> parse_text(const std::string &text, std::string filename = "repl.zion") {
+ptr<T> parse_text(const std::string &text, std::string filename = "repl.llz") {
 	std::istringstream iss(text);
 	return parse_text<T>(iss, filename);
 }
-
-types::type_t::ref parse_maybe_type(parse_state_t &ps,
-	   	identifier::ref supertype_id,
-	   	identifier::refs type_variables,
-	   	identifier::set generics);
-
-types::type_t::ref _parse_type(
-		parse_state_t &ps,
-	   	identifier::ref supertype_id,
-	   	identifier::refs type_variables,
-	   	identifier::set generics);

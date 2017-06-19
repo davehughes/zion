@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.4.3)
-project(Zion)
+project(LLZ)
 
 include_directories(BEFORE .)
 add_definitions(-DZION_DEBUG)
@@ -42,7 +42,7 @@ foreach(_rt_module
 
 endforeach(_rt_module)
 
-add_executable(zionc
+add_executable(llz
 	rt_float.llir
 	rt_int.llir
 	rt_ref.llir
@@ -68,7 +68,6 @@ add_executable(zionc
 	location.cpp
 	logger.cpp
 	main.cpp
-	main.cpp
 	mmap_file.cpp
 	parse_state.cpp
 	parser.cpp
@@ -80,9 +79,6 @@ add_executable(zionc
 	status.cpp
 	tests.cpp
 	token.cpp
-	llz_lexer.cpp
-	llz_token.cpp
-	token_queue.cpp
 	type_checker.cpp
 	type_instantiation.cpp
 	types.cpp
@@ -99,13 +95,13 @@ add_executable(zionc
 llvm_map_components_to_libnames(llvm_libs support core irreader mcjit)
 
 # Link against LLVM libraries
-target_link_libraries(zionc ${llvm_libs})
+target_link_libraries(llz ${llvm_libs})
 
 enable_testing()
 
 add_test(
 	NAME unit_tests
-	COMMAND ./zionc test)
+	COMMAND ./llz test)
 
 foreach(_test_name
 		test_hello_world

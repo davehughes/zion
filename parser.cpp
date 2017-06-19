@@ -1122,7 +1122,7 @@ void parse_maybe_type_decl(parse_state_t &ps, identifier::refs &type_variables) 
 	}
 }
 
-identifier::ref make_code_id(const zion_token_t &token) {
+identifier::ref make_code_id(const token_t &token) {
 	return make_ptr<code_id>(token);
 }
 
@@ -1284,7 +1284,7 @@ types::type_t::ref _parse_single_type(
 					ps.error("product type dimensions must be separated by a newline");
 				}
 
-				zion_token_t var_token;
+				token_t var_token;
 				if (ps.token.tk == tk_var) {
 					ps.advance();
 					expect_token(tk_identifier);
@@ -1497,7 +1497,7 @@ types::type_t::ref parse_maybe_type(parse_state_t &ps,
 	return nullptr;
 }
 
-type_decl_t::ref type_decl_t::parse(parse_state_t &ps, zion_token_t name_token) {
+type_decl_t::ref type_decl_t::parse(parse_state_t &ps, token_t name_token) {
 	identifier::refs type_variables;
 	parse_maybe_type_decl(ps, type_variables);
 
@@ -1621,7 +1621,7 @@ type_alias_t::ref type_alias_t::parse(
 }
 
 dimension_t::ref dimension_t::parse(parse_state_t &ps, identifier::set generics) {
-	zion_token_t primary_token;
+	token_t primary_token;
 	atom name;
 	if (ps.token.tk == tk_var) {
 		ps.advance();
