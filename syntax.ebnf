@@ -1,11 +1,10 @@
 integer        ::= [1-9] [0-9]*
 identifier     ::= [a-zA-Z_][_a-zA-Z0-9]* | ( "'" [^']+ "'" )
 
-type_def       ::= 'type' identifier ( 'struct' '{' ( identifier '*'* identifier )+ '}' ) | (
-'polymorph' '{' identifier+ '}' )
-
-function       ::= 'fn' identifier? '(' ( identifier ':' identifier ( ',' identifier ':'
-identifier )* )? ')' identifier block
+type_def       ::= 'type' identifier ( 'struct' '{' ( identifier type_expr )+ '}' ) | ( 'polymorph' '{' identifier+ '}' )
+type_expr      ::= '*'* identifier
+function_decl  ::= 'fn' identifier? '(' ( identifier type_expr ( ',' identifier type_expr )* )? ')' type_expr
+function       ::= function_decl block
 
 block          ::= '{' statement* '}'
 statement      ::=
@@ -21,6 +20,7 @@ statement      ::=
 
 expression ::=
   	  ref_expr
+  	| '*' ref_expr
 	| callsite_expr
 	| literal
 	| ( ref_expr '?' expression ':' expression )
