@@ -15,17 +15,15 @@
 #include "utils.h"
 #include "llvm_test.h"
 #include "llvm_utils.h"
-#include "unification.h"
-#include "llz_lexer.h"
 
 #define test_assert(x) if (!(x)) { \
 	log(log_error, "test_assert " c_error(#x) " failed at " c_line_ref("%s:%d"), __FILE__, __LINE__); \
    	return false; \
 } else {}
 
-std::vector<token_kind> get_tks(zion_lexer_t &lexer, bool include_newlines, std::vector<zion_token_t> &comments) {
+std::vector<token_kind> get_tks(lexer_t &lexer, bool include_newlines, std::vector<token_t> &comments) {
 	std::vector<token_kind> tks;
-	zion_token_t token;
+	token_t token;
 	bool newline = false;
 	while (lexer.get_token(token, newline, &comments)) {
 		if (include_newlines && newline && token.tk != tk_outdent) {
@@ -36,9 +34,9 @@ std::vector<token_kind> get_tks(zion_lexer_t &lexer, bool include_newlines, std:
 	return tks;
 }
 
-std::vector<llz_token_kind_t> get_lltks(llz_lexer_t &lexer, std::vector<llz_token_t> &comments) {
-	std::vector<llz_token_kind_t> lltks;
-	llz_token_t token;
+std::vector<token_kind_t> get_lltks(lexer_t &lexer, std::vector<token_t> &comments) {
+	std::vector<token_kind_t> lltks;
+	token_t token;
 	while (lexer.get_token(token, &comments)) {
 		lltks.push_back(token.lltk);
 	}
@@ -49,7 +47,7 @@ const char *to_str(token_kind tk) {
 	return tkstr(tk);
 }
 
-const char *to_str(llz_token_kind_t lltk) {
+const char *to_str(token_kind_t lltk) {
 	return lltkstr(lltk);
 }
 
@@ -93,9 +91,9 @@ void log_list(log_level_t level, const char *prefix, T &xs) {
 	log(level, "%s [%s]", prefix, ss.str().c_str());
 }
 
-bool check_lexer(std::string text, std::vector<token_kind> expect_tks, bool include_newlines, std::vector<zion_token_t> &comments) {
+bool check_lexer(std::string text, std::vector<token_kind> expect_tks, bool include_newlines, std::vector<token_t> &comments) {
 	std::istringstream iss(text);
-	zion_lexer_t lexer("check_lexer", iss);
+	lexer_t lexer("check_lexer", iss);
 	std::vector<token_kind> result_tks = get_tks(lexer, include_newlines, comments);
 	if (!check_tks_match(expect_tks, result_tks)) {
 		log(log_info, "for text: '%s'", text.c_str());
@@ -106,10 +104,10 @@ bool check_lexer(std::string text, std::vector<token_kind> expect_tks, bool incl
 	return true;
 }
 
-bool llz_check_lexer(std::string text, std::vector<llz_token_kind_t> expect_lltks, std::vector<llz_token_t> &comments) {
+bool check_lexer(std::string text, std::vector<token_kind_t> expect_lltks, std::vector<token_t> &comments) {
 	std::istringstream iss(text);
-	llz_lexer_t lexer("llz_check_lexer", iss);
-	std::vector<llz_token_kind_t> result_lltks = get_lltks(lexer, comments);
+	lexer_t lexer("check_lexer", iss);
+	std::vector<token_kind_t> result_lltks = get_lltks(lexer, comments);
 	if (!check_tks_match(expect_lltks, result_lltks)) {
 		log(log_info, "for text: '%s'", text.c_str());
 		log_list(log_info, "expected", expect_lltks);
@@ -126,7 +124,7 @@ struct lexer_test_t {
 
 typedef std::vector<lexer_test_t> lexer_tests;
 
-bool lexer_test_comments(const lexer_tests &tests, std::vector<zion_token_t> &comments, bool include_newlines=false) {
+bool lexer_test_comments(const lexer_tests &tests, std::vector<token_t> &comments, bool include_newlines=false) {
 	for (auto &test : tests) {
 		if (!check_lexer(test.text, test.tks, include_newlines, comments)) {
 			return false;
@@ -136,7 +134,7 @@ bool lexer_test_comments(const lexer_tests &tests, std::vector<zion_token_t> &co
 }
 
 bool lexer_test(const lexer_tests &tests, bool include_newlines=false) {
-	std::vector<zion_token_t> comments;
+	std::vector<token_t> comments;
 	for (auto &test : tests) {
 		if (!check_lexer(test.text, test.tks, include_newlines, comments)) {
 			return false;
@@ -145,17 +143,17 @@ bool lexer_test(const lexer_tests &tests, bool include_newlines=false) {
 	return true;
 }
 
-struct llz_lexer_test_t {
+struct lexer_test_t {
 	std::string text;
-	std::vector<llz_token_kind_t> lltks;
+	std::vector<token_kind_t> lltks;
 };
 
-typedef std::vector<llz_lexer_test_t> llz_lexer_tests;
+typedef std::vector<lexer_test_t> lexer_tests;
 
-bool llz_lexer_test(const llz_lexer_tests &tests, bool include_newlines=false) {
-	std::vector<llz_token_t> comments;
+bool lexer_test(const lexer_tests &tests, bool include_newlines=false) {
+	std::vector<token_t> comments;
 	for (auto &test : tests) {
-		if (!llz_check_lexer(test.text, test.lltks, comments)) {
+		if (!check_lexer(test.text, test.lltks, comments)) {
 			return false;
 		}
 	}
@@ -212,7 +210,7 @@ bool test_lex_comments() {
 		{"a # hey", {tk_identifier}},
 		{"( # hey )", {tk_lparen}},
 	};
-	std::vector<zion_token_t> comments;
+	std::vector<token_t> comments;
 	if (lexer_test_comments(tests, comments)) {
 		if (comments.size() != tests.size()) {
 			log(log_error, "failed to find the comments");
@@ -338,8 +336,8 @@ bool test_lex_floats() {
 	return lexer_test(tests);
 }
 
-bool test_llz_lex_types() {
-	llz_lexer_tests tests = {
+bool test_lex_types() {
+	lexer_tests tests = {
 		{"type x struct {x X y Y }", {
 			lltk_type, lltk_identifier, lltk_struct,
 			lltk_lcurly, lltk_identifier, lltk_identifier,
@@ -348,13 +346,6 @@ bool test_llz_lex_types() {
 			lltk_type, lltk_string, lltk_polymorph,
 			lltk_match, lltk_colon, lltk_semicolon,
 			lltk_star}},
-	};
-	return llz_lexer_test(tests);
-}
-
-bool test_lex_types() {
-	lexer_tests tests = {
-		{"type x int", {tk_type, tk_identifier, tk_identifier}},
 	};
 	return lexer_test(tests);
 }
@@ -648,7 +639,7 @@ bool expect_output_lacks(test_output_source_t tos,
 }
 
 bool get_testable_comments(
-		const std::vector<zion_token_t> &comments,
+		const std::vector<token_t> &comments,
 		std::vector<std::string> &error_terms,
 	   	std::vector<std::string> &unseen_terms,
 		bool &skip_test,
@@ -874,7 +865,7 @@ auto test_descs = std::vector<test_desc>{
 		"test_compiler_build_state",
 		[] () -> bool {
 			auto filename = "xyz.zion";
-			zion_token_t token({filename, 1, 1}, tk_module, "xyz");
+			token_t token({filename, 1, 1}, tk_module, "xyz");
 			auto module = ast::create<ast::module_t>(token, filename);
 			return !!module;
 		}
@@ -933,7 +924,6 @@ auto test_descs = std::vector<test_desc>{
 	T(test_lex_syntax),
 	T(test_lex_floats),
 	T(test_lex_types),
-	T(test_llz_lex_types),
 
 	{
 		"test_type_algebra",

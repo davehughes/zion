@@ -1,6 +1,5 @@
 #pragma once
 #include "token.h"
-#include "token_queue.h"
 
 #ifdef DEBUG_LEXER
 #define debug_lexer(x) x
@@ -8,25 +7,20 @@
 #define debug_lexer(x)
 #endif
 
-class zion_lexer_t
+class lexer_t
 {
 public:
-	zion_lexer_t(atom filename, std::istream &is);
-	~zion_lexer_t();
+	lexer_t(atom filename, std::istream &is);
+	~lexer_t();
 
-	bool get_token(zion_token_t &token, bool &newline, std::vector<zion_token_t> *comments);
-	bool _get_tokens();
+	bool get_token(token_t &token, std::vector<token_t> *comments);
 
 private:
 	void reset_token();
-	void enqueue_indents(int line, int col, int indent_depth);
-	bool handle_nests(token_kind tk);
-	void pop_nested(token_kind tk);
 
-	atom                      m_filename;
-	std::istream             &m_is;
-	int                       m_line=1, m_col=1;
-	int                       m_last_indent_depth;
-	zion_token_queue_t       m_token_queue;
-	std::list<token_kind>     m_nested_tks;
+	atom           m_filename;
+	std::istream  &m_is;
+	int            m_line=1, m_col=1;
 };
+
+token_kind_t translate_lltk(token_kind_t tk, const zion_string_t &token_text);

@@ -9,7 +9,7 @@
 #include "unchecked_var.h"
 #include "signature.h"
 
-extern const token_kind SCOPE_TK;
+extern const token_kind_t SCOPE_TK;
 extern const char *SCOPE_SEP;
 extern const char SCOPE_SEP_CHAR;
 extern const char *GLOBAL_ID;

@@ -6,22 +6,9 @@
 
 typedef stackstring_t<(1024 * 4) - sizeof(char) - sizeof(size_t)> zion_string_t;
 
-enum token_kind
-{
+enum token_kind_t {
 	tk_none, /* NULL TOKEN */
-
-	// Comment
 	tk_comment, /* # hey */
-
-	// Whitespace
-	tk_space, /* " " */
-	tk_newline, /* newline */
-
-	// Context Blocks
-	tk_indent, /* indent */
-	tk_outdent, /* outdent */
-
-	// References
 	tk_identifier, /* identifier */
 
 	// Syntax
@@ -30,96 +17,54 @@ enum token_kind
 	tk_comma, /* , */
 	tk_lcurly, /* { */
 	tk_rcurly, /* } */
+	tk_lapply, /* < */
+	tk_rapply, /* > */
 	tk_lsquare, /* [ */
 	tk_rsquare, /* ] */
 	tk_colon, /* : */
+	tk_dot, /* . */
 	tk_semicolon, /* ; */
-	tk_def, /* def */
-	tk_ref, /* ref */
+	tk_type, /* type */
+	tk_fn, /* fn */
 	tk_var, /* var */
+	tk_const, /* const */
 	tk_return, /* return */
 
-	// Types
-	tk_any, /* any */
-	tk_type, /* type */
-	tk_tag, /* tag */
-	tk_get_typeid, /* __get_typeid__ */
-	tk_sizeof, /* sizeof */
-	tk_is, /* is */
-	tk_as, /* as */
-	tk_has, /* has */
-	tk_matches, /* matches */
+	tk_struct, /* struct */
+	tk_polymorph, /* polymorph */
 
 	// Literals
-	tk_atom, /* atom literal */
 	tk_char, /* char literal */
-	tk_error, /* error literal */
 	tk_float, /* 3.1415e20 */
 	tk_integer, /* [0-9]+ */
 	tk_string, /* "string literal" */
-	tk_raw_float, /* 3.1415e20r */
-	tk_raw_integer, /* [0-9]+r */
-	tk_raw_string, /* "string literal"r */
-	tk_version, /* #blah */
 
-	// Flow control
-	tk_pass, /* pass */
+	tk_line, /* line */
 	tk_if, /* if */
-	tk_elif, /* else */
 	tk_else, /* else */
-	tk_for, /* for */
-	tk_while, /* while */
+	tk_loop, /* loop */
 	tk_continue, /* continue */
 	tk_break, /* break */
-	tk_when, /* when */
-	tk_with, /* with */
+	tk_match, /* match */
 
 	// Operators
-	tk_equal, /* == */
-	tk_inequal, /* != */
-	tk_bang, /* ! */
-	tk_maybe, /* ? */
-	tk_lt, /* < */
-	tk_gt, /* > */
-	tk_lte, /* <= */
-	tk_gte, /* >= */
-	tk_assign, /* = */
-	tk_becomes, /* := */
-	tk_plus, /* + */
-	tk_minus, /* - */
-	tk_times, /* * */
-	tk_divide_by, /* / */
-	tk_mod, /* % */
-	tk_dot, /* . */
-	tk_double_dot, /* .. */
-	tk_not, /* not */
-	tk_in, /* in */
-	tk_or, /* or */
-	tk_and, /* and */
-
-	// Mutating binary ops
-	tk_plus_eq, /* += */
-	tk_maybe_eq, /* ?= */
-	tk_minus_eq, /* -= */
-	tk_times_eq, /* *= */
-	tk_divide_by_eq, /* /= */
-	tk_mod_eq, /* %= */
+	tk_assign,  /* = */
+	tk_star,    /* * */
 
 	// Dependency tokens
-	tk_module, /* module */
+	tk_program, /* program */
 	tk_link, /* link */
-	tk_to, /* to */
 };
 
 
-struct zion_token_t {
-	zion_token_t(const location_t &location={{""},-1,-1}, token_kind tk=tk_none, std::string text="") : location(location), tk(tk), text(text) {}
+struct token_t {
+	token_t(const location_t &location={{""},-1,-1}, token_kind_t tk=tk_none, std::string text="") : location(location), tk(tk), text(text) {}
 	location_t location;
-	token_kind tk = tk_none;
+	token_kind_t tk = tk_none;
 	std::string text;
 	std::string str() const;
-	void emit(int &indent_level, token_kind &last_tk, bool &indented_line);
+	void emit(int &indent_level, token_kind_t &last_tk, bool &indented_line);
 };
 
-const char *tkstr(token_kind tk);
-void emit_tokens(const std::vector<zion_token_t> &tokens);
+const char *tkstr(token_kind_t tk);
+void emit_tokens(const std::vector<token_t> &tokens);

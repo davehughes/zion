@@ -1,18 +1,18 @@
 program test_list
 
-type "List{int}" polymorph {
+type List<int> polymorph {
 	/* guarantees that all contained types either are atoms, or contain an atom as their first element */
 	Done
-	Node{int}
+	Node<int>
 }
 
-type "Node{int}" struct {
+type Node<int> struct {
 	value int
-	next "List{int}"
+	next List<int>
 }
 
 /* struct type will automatically create a type constructor for the named type */
-fn "Node{int}"(p1 int, p2 List{int}) Node{int} ctor
+fn Node<int>(p1 int, p2 List<int>) Node<int> ctor
 
 type int struct {
 	raw __int__
@@ -23,13 +23,13 @@ fib 1 = 1
 fib 0 = 1
 fib x = fib (x - 1) + fib (x - 2)
 
-fn len(l "List{int}") int {
+fn len(l List<int>) int {
 	match l {
-		"Done": {
+		<Done>: {
 			const _t1 int = int(0)
 			return _t1
 		}
-		"Node{int}": {
+		<Node{int}>: {
 			const _t1 = int(1)
 			const _t2 = len(l.next)
 			const _t3 = __plus__(_t1, _t2)
@@ -39,19 +39,24 @@ fn len(l "List{int}") int {
 	/* we can be sure we'll never hit this codepath due to full coverage checks on the pattern match */
 }
 
-fn sum(l List{int}) int {
+fn sum(l List<int>) int {
 	match l {
 		Done: {
-			const _t1 = int(0)
+			line {
+				const _t1 = int(0)
+			}
 			return _t1
 		}
-		*"Node{int}" {
-			const _t1 = l.value
-			const _t2 = sum(l.next)
-			const _t3 = __plus__(_t1, _t2)
+		Node<int>: {
+			line {
+				const _t1 = l.value
+				const _t2 = sum(l.next)
+				const _t3 = __plus__(_t1, _t2)
+			}
 			return _t3
 		}
 	}
+
 	/* we can be sure we'll never hit this codepath due to full coverage checks on the pattern match */
 }
 
@@ -60,11 +65,11 @@ main(argc __int__, argv *__str__) __int__ {
 	var l = line (location in source code) {
 		const _t1 = Done
 		const _t2 = int(3)
-		const _t3 = Node{int}(_t2, _t1)
+		const _t3 = Node<int>(_t2, _t1)
 		const _t4 = int(2)
-		const _t5 = Node{int}(_t4, _t3)
+		const _t5 = Node<int>(_t4, _t3)
 		const _t6 = int(1)
-		const _t7 = Node{int}(_t6, _t5)
+		const _t7 = Node<int>(_t6, _t5)
 		return _t7
 	}
 

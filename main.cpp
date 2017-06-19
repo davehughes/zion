@@ -96,18 +96,7 @@ int main(int argc, char *argv[]) {
                 return EXIT_SUCCESS;
 			}
 			return EXIT_FAILURE;
-        /*} else if (cmd == "llz") {
-			llzc_t llz_compiler(argv[2], {".", "lib", "tests"});
-			llz_compiler.build(status);
-
-			if (!!status) {
-				llz_compiler.compile(status);
-				if (!!status) {
-					return EXIT_SUCCESS;
-				}
-			}
-			return EXIT_FAILURE;*/
-        } else if (cmd == "compile") {
+		} else if (cmd == "compile") {
 			compiler.build_parse_modules(status);
 
 			if (!!status) {
@@ -117,7 +106,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			return EXIT_FAILURE;
-        } else if (cmd == "fmt") {
+		} else if (cmd == "fmt") {
 			compiler.build_parse_modules(status);
 
 			if (!!status) {
@@ -130,7 +119,7 @@ int main(int argc, char *argv[]) {
 			} else {
 				return EXIT_FAILURE;
 			}
-        } else if (cmd == "run") {
+		} else if (cmd == "run") {
 			compiler.build_parse_modules(status);
 
 			if (!!status) {
