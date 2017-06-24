@@ -20,7 +20,7 @@ statement      ::=
 
 expression ::=
   	  ref_expr
-  	| '*' ref_expr
+	| '*' ref_expr
 	| callsite_expr
 	| literal
 	| ( ref_expr '?' expression ':' expression )
