@@ -23,6 +23,9 @@ const char *tkstr(token_kind_t tk) {
 	tk_case(break);
 	tk_case(char);
 	tk_case(colon);
+	tk_case(question);
+	tk_case(as);
+	tk_case(module);
 	tk_case(comma);
 	tk_case(comment);
 	tk_case(const);
@@ -43,7 +46,6 @@ const char *tkstr(token_kind_t tk) {
 	tk_case(match);
 	tk_case(none);
 	tk_case(polymorph);
-	tk_case(program);
 	tk_case(rcurly);
 	tk_case(return);
 	tk_case(rparen);
@@ -70,6 +72,7 @@ token_kind_t translate_tk(token_kind_t tk, const zion_string_t &token_text) {
 		{"continue", tk_continue},
 		{"else", tk_else},
 		{"fn", tk_fn},
+		{"as", tk_as},
 		{"if", tk_if},
 		{"line", tk_line},
 		{"loop", tk_loop},
@@ -101,6 +104,15 @@ void token_t::emit(int &indent_level, token_kind_t &last_tk, bool &indented_line
 	   	break;
 	case tk_comment:
 		printf("# %s\n", text.c_str());
+		break;
+	case tk_module:
+		printf("module");
+		break;
+	case tk_question:
+		printf("?");
+		break;
+	case tk_as:
+		printf("as");
 		break;
 	case tk_line:
 		printf("line");
@@ -193,18 +205,11 @@ void token_t::emit(int &indent_level, token_kind_t &last_tk, bool &indented_line
 	case tk_match:
 		printf("match");
 		break;
-
-	// Operators
 	case tk_assign:
 		printf("assign");
 		break;
 	case tk_star:
 		printf("star");
-		break;
-
-	// Dependency tokens
-	case tk_program:
-		printf("program");
 		break;
 	case tk_link:
 		printf("link");

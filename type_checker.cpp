@@ -28,7 +28,7 @@
 bound_type_t::ref get_fully_bound_param_info(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
-		const ast::var_decl_t &obj,
+		const ast::param_decl_t &obj,
 		scope_t::ref scope,
 		atom &var_name,
 		atom::set &generics,
@@ -38,14 +38,13 @@ bound_type_t::ref get_fully_bound_param_info(
 		/* get the name of this parameter */
 		var_name = obj.token.text;
 
-		assert(obj.type != nullptr);
+		assert(obj.type_name.name.size() != 0);
 
 		/* the user specified a type */
 		if (!!status) {
-			debug_above(6, log(log_info, "upserting type for param %s at %s",
-						obj.type->str().c_str(),
-						obj.type->get_location().str().c_str()));
-			return upsert_bound_type(status, builder, scope, obj.type);
+			debug_above(6, log(log_info, "upserting type for param %s",
+						obj.type_name.str().c_str()));
+			return upsert_bound_type(status, builder, scope, obj.type_name);
 		}
 	}
 
@@ -58,22 +57,19 @@ bound_var_t::ref generate_stack_variable(
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
 		life_t::ref life,
-		const ast::like_var_decl_t &obj,
+		const ast::var_decl_t &obj,
 		atom symbol,
 		types::type_t::ref declared_type,
 		bool maybe_unbox)
 {
 	/* 'init_var' is keeping track of the value we are assigning to our new
 	 * variable (if any exists.) */
-	bound_var_t::ref init_var;
 
 	/* only check initializers inside a runnable scope */
 	assert(dyncast<runnable_scope_t>(scope) != nullptr);
 
-	if (obj.has_initializer()) {
-		/* we have an initializer */
-		init_var = obj.resolve_initializer(status, builder, scope, life);
-	}
+	/* we have an initializer */
+	bound_var_t::ref init_var = obj.resolve_initializer(status, builder, scope, life);
 
 	/* 'type' is keeping track of what the variable's ending type will be */
 	bound_type_t::ref bound_type;
@@ -232,8 +228,8 @@ bound_var_t::ref generate_module_variable(
 
 	if (obj.initializer) {
 		/* we have an initializer */
-		init_var = obj.initializer->resolve_instantiation(status, builder,
-				scope, life, nullptr, nullptr);
+		init_var = obj.initializer->resolve_expression(status, builder,
+				scope, life);
 	}
 
 	types::type_t::ref lhs_type = declared_type;
@@ -328,10 +324,11 @@ bound_var_t::ref type_check_bound_var_decl(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
-		const ast::like_var_decl_t &obj,
+		const ast::var_decl_t &obj,
 		life_t::ref life,
 		bool maybe_unbox)
 {
+#if 0
 	const atom symbol = obj.get_symbol();
 
 	debug_above(4, log(log_info, "type_check_var_decl is looking for a type for variable " c_var("%s") " : %s",
@@ -356,7 +353,7 @@ bound_var_t::ref type_check_bound_var_decl(
 		return generate_stack_variable(status, builder, scope, life,
 				obj, symbol, declared_type, maybe_unbox);
 	}
-
+#endif
 	assert(!status);
 	return nullptr;
 }
@@ -377,8 +374,6 @@ bound_var_t::ref type_check_module_var_decl(
 		user_error(status, obj, "module variables cannot be redeclared");
 		return nullptr;
 	}
-
-	assert(obj.type != nullptr);
 
 	if (!!status) {
 		/* 'declared_type' tells us the user-declared type on the left-hand side of
@@ -461,25 +456,11 @@ void type_check_fully_bound_function_decl(
 		llvm::IRBuilder<> &builder,
 		const ast::function_decl_t &obj,
 		scope_t::ref scope,
-		types::type_t::ref &inbound_context,
 		bound_type_t::named_pairs &params,
 		bound_type_t::ref &return_value)
 {
 	/* returns the parameters and the return value types fully resolved */
 	debug_above(4, log(log_info, "type checking function decl %s", obj.token.str().c_str()));
-
-	if (obj.inbound_context != nullptr) {
-		inbound_context = obj.inbound_context;
-
-		if (!status) {
-			user_message(log_info, status, obj, "while instantiating %s", obj.token.str().c_str());
-			return;
-		}
-	} else {
-		/* this function does not have a context declaration, use the current
-		 * module's type (which basically defaults to private scope */
-		inbound_context = scope->get_inbound_context();
-	}
 
 	if (obj.param_list_decl) {
 		/* the parameter types as per the decl */
@@ -683,12 +664,11 @@ bound_var_t::ref ast::link_function_statement_t::resolve_instantiation(
 	assert(module_scope);
 
 	if (!scope->has_bound_variable(function_name.text, rc_just_current_scope)) {
-		types::type_t::ref inbound_context;
 		bound_type_t::named_pairs named_args;
 		bound_type_t::ref return_value;
 
 		type_check_fully_bound_function_decl(status, builder, *extern_function,
-				scope, inbound_context, named_args, return_value);
+				scope, named_args, return_value);
 
 		if (!!status) {
 			bound_type_t::refs args;
@@ -736,17 +716,6 @@ bound_var_t::ref ast::link_function_statement_t::resolve_instantiation(
 	return nullptr;
 }
 
-bound_var_t::ref ast::link_name_t::resolve_instantiation(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		scope_t::ref scope,
-		life_t::ref life,
-		local_scope_t::ref *new_scope,
-		bool *returns) const
-{
-	return null_impl();
-}
-
 bound_var_t::ref ast::dot_expr_t::resolve_overrides(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
@@ -769,9 +738,7 @@ bound_var_t::ref ast::dot_expr_t::resolve_overrides(
 
 			/* let's see if the associated module has a method that can handle this callsite */
 			return get_callable(status, builder, bound_module->module_scope,
-					rhs.text, callsite,
-					bound_module->module_scope->get_outbound_context(),
-					get_args_type(args));
+					rhs.text, callsite, get_args_type(args));
 		} else {
 			user_error(status, *lhs, "left of a dot (\".\") must be a struct or module. this is not a struct or module. %s",
 					lhs_var->str().c_str());
@@ -880,70 +847,6 @@ bound_var_t::ref ast::reference_expr_t::resolve_instantiation(
 
 	if (!var) {
 		user_error(status, *this, "undefined symbol " c_id("%s"), token.text.c_str());
-	}
-
-	return var;
-}
-
-bound_var_t::ref ast::reference_expr_t::resolve_as_condition(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		scope_t::ref scope,
-		life_t::ref life,
-		local_scope_t::ref *new_scope) const
-{
-	/* we wouldn't be referencing a variable name here unless it was unique
-	 * override resolution only happens on callsites, and we don't allow
-	 * passing around unresolved overload references */
-	bound_var_t::ref var = scope->get_bound_variable(status, shared_from_this(), token.text);
-
-	if (!var) {
-		user_error(status, *this, "undefined symbol " c_id("%s"), token.text.c_str());
-	}
-
-	if (auto maybe_type = dyncast<const types::type_maybe_t>(var->type->get_type())) {
-		runnable_scope_t::ref runnable_scope = dyncast<runnable_scope_t>(scope);
-		assert(runnable_scope);
-
-		/* variable declarations begin new scopes */
-		local_scope_t::ref fresh_scope = runnable_scope->new_local_scope(
-				string_format("if-assignment-%s", token.text.c_str()));
-
-		scope = fresh_scope;
-		*new_scope = fresh_scope;
-
-		/* looks like the initialization variable is a supertype
-		 * of the nil type */
-		auto bound_type = upsert_bound_type(status, builder, scope,
-				maybe_type->just);
-
-		if (!!status) {
-			/* because we're evaluating this maybe value in the context of a
-			 * condition (super simplified at this point), let's redeclare it
-			 * without its maybe, since we know it will be valid if the
-			 * condition passes */
-			bound_var_t::ref var_decl_variable =
-				bound_var_t::create(INTERNAL_LOC(), token.text, bound_type,
-						var->get_llvm_value(), make_code_id(token),
-					   	var->is_lhs() /*is_lhs*/, false /*is_global*/);
-
-			/* on our way out, stash the variable in the current scope */
-			scope->put_bound_variable(status, var_decl_variable->name,
-					var_decl_variable);
-
-			/* get the maybe type so that we can use it as a conditional */
-			bound_type_t::ref condition_type = upsert_bound_type(status, builder, scope, maybe_type);
-			if (!!status) {
-				return bound_var_t::create(INTERNAL_LOC(), token.text,
-						condition_type, var->resolve_value(builder), make_code_id(token),
-						false /*is_lhs*/, false /*is_global*/);
-			}
-		}
-
-		assert(!status);
-		return nullptr;
-	} else {
-		/* this is not a maybe, so let's just move along */
 	}
 
 	return var;
@@ -1225,7 +1128,7 @@ llvm::Value *maybe_get_bool_overload_value(
 
 	var_t::refs fns;
 	auto bool_fn = maybe_get_callable(status, builder, scope, BOOL_TYPE,
-			condition->get_location(), scope->get_outbound_context(),
+			condition->get_location(),
 			type_args({condition_type}), fns);
 
 	if (!!status) {
@@ -1279,22 +1182,10 @@ bound_var_t::ref ast::ternary_expr_t::resolve_instantiation(
 
 	assert(condition != nullptr);
 
-	bound_var_t::ref condition_value;
 
 	/* evaluate the condition for branching */
-	if (auto var_decl = dyncast<const ast::var_decl_t>(condition)) {
-		/* our user is attempting an assignment inside of an if statement, let's
-		 * grant them a favor, and automatically unbox the Maybe type if it
-		 * exists. */
-		condition_value = var_decl->resolve_as_condition(
-				status, builder, scope, life, &if_scope);
-	} else if (auto ref_expr = dyncast<const ast::reference_expr_t>(condition)) {
-		condition_value = ref_expr->resolve_as_condition(
-				status, builder, scope, life, &if_scope);
-	} else {
-		condition_value = condition->resolve_instantiation(
-				status, builder, scope, life, &if_scope, nullptr);
-	}
+	bound_var_t::ref condition_value = condition->resolve_expression(
+			status, builder, scope, life);
 
 	if (!!status) {
 		/* if the condition value is a maybe type, then we'll need multiple
@@ -1822,10 +1713,9 @@ bound_var_t::ref ast::function_defn_t::resolve_instantiation(
 				scope->get_name().c_str()));
 
 	/* see if we can get a monotype from the function declaration */
-	types::type_t::ref inbound_context;
 	bound_type_t::named_pairs args;
 	bound_type_t::ref return_type;
-	type_check_fully_bound_function_decl(status, builder, *decl, scope, inbound_context, args, return_type);
+	type_check_fully_bound_function_decl(status, builder, *decl, scope, args, return_type);
 
 	if (!!status) {
 		return instantiate_with_args_and_return_type(status, builder, scope, life,
@@ -2171,7 +2061,6 @@ void type_check_all_module_var_slots(
 				builder, 
 				program_scope,
 				static_cast<const ast::item_t&>(obj).shared_from_this(),
-				type_module(type_variable(INTERNAL_LOC())),
 				{},
 				program_scope->get_bound_type({"void"}),
 				"__init_module_vars");
@@ -2729,10 +2618,6 @@ struct for_like_var_decl_t : public ast::like_var_decl_t {
 		return type;
 	}
 
-	virtual bool has_initializer() const {
-		return true;
-	}
-
 	virtual bound_var_t::ref resolve_initializer(
 			status_t &status,
 			llvm::IRBuilder<> &builder,
@@ -2743,7 +2628,7 @@ struct for_like_var_decl_t : public ast::like_var_decl_t {
 	}
 };
 
-bound_var_t::ref ast::for_block_t::resolve_instantiation(
+bound_var_t::ref ast::loop_block_t::resolve_instantiation(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
@@ -2751,30 +2636,7 @@ bound_var_t::ref ast::for_block_t::resolve_instantiation(
 		local_scope_t::ref *new_scope,
 		bool *returns) const
 {
-	auto maybe_step_symbol = types::gensym();
-
-	bound_var_t::ref maybe_step = type_check_bound_var_decl(
-			status,
-			builder,
-			scope,
-			for_like_var_decl_t(
-				maybe_step_symbol->get_name(),
-				maybe_step_symbol->get_location(),
-				*collection),
-			life,
-			false /*maybe_unbox*/);
-
-	return null_impl();
-}
-
-bound_var_t::ref ast::while_block_t::resolve_instantiation(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		scope_t::ref scope,
-		life_t::ref life,
-		local_scope_t::ref *new_scope,
-		bool *returns) const
-{
+#if 0
 	/* while scope allows us to set up new variables inside while conditions */
 	local_scope_t::ref while_scope;
 
@@ -2877,6 +2739,7 @@ bound_var_t::ref ast::while_block_t::resolve_instantiation(
 		/* this should never happen */
 		not_impl();
 	}
+#endif
 
     assert(!status);
     return nullptr;
@@ -3050,69 +2913,6 @@ bound_var_t::ref ast::if_block_t::resolve_instantiation(
     return nullptr;
 }
 
-bound_var_t::ref ast::bang_expr_t::resolve_instantiation(
-		status_t &status,
-	   	llvm::IRBuilder<> &builder,
-	   	scope_t::ref scope,
-		life_t::ref life,
-	   	local_scope_t::ref *new_scope,
-	   	bool *) const
-{
-	auto lhs_value = lhs->resolve_instantiation(status, builder, scope, life,
-			new_scope, nullptr);
-
-	if (!!status) {
-		auto type = lhs_value->type->get_type();
-		auto maybe_type = dyncast<const types::type_maybe_t>(type);
-		if (maybe_type != nullptr) {
-			bound_type_t::ref just_bound_type = upsert_bound_type(status,
-					builder, scope, maybe_type->just);
-
-			return bound_var_t::create(INTERNAL_LOC(), lhs_value->name,
-					just_bound_type,
-					lhs_value->get_llvm_value(),
-					lhs_value->id,
-					lhs_value->is_lhs(),
-					false /*is_global*/);
-		} else {
-			user_error(status, *this, "bang expression is unnecessary since this is not a 'maybe' type: %s",
-					type->str().c_str());
-		}
-	}
-
-	assert(!status);
-	return nullptr;
-}
-
-bound_var_t::ref ast::var_decl_t::resolve_as_condition(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		scope_t::ref scope,
-		life_t::ref life,
-		local_scope_t::ref *new_scope) const
-{
-    runnable_scope_t::ref runnable_scope = dyncast<runnable_scope_t>(scope);
-    assert(runnable_scope);
-
-    /* variable declarations begin new scopes */
-    local_scope_t::ref fresh_scope = runnable_scope->new_local_scope(
-            string_format("if-assignment-%s", token.text.c_str()));
-
-    scope = fresh_scope;
-
-    /* check to make sure this var decl is sound */
-    bound_var_t::ref var_decl_value = type_check_bound_var_decl(
-            status, builder, fresh_scope, *this, life, true /*maybe_unbox*/);
-
-	if (!!status) {
-		*new_scope = fresh_scope;
-		return var_decl_value;
-	}
-
-	assert(!status);
-	return nullptr;
-}
-
 bound_var_t::ref ast::var_decl_t::resolve_instantiation(
         status_t &status,
         llvm::IRBuilder<> &builder,
@@ -3258,7 +3058,6 @@ bound_var_t::ref ast::literal_expr_t::resolve_instantiation(
 						scope,
 						{"int"},
 						shared_from_this(),
-						scope->get_outbound_context(),
 						get_args_type({native_type}));
 
 				if (!!status) {
@@ -3309,7 +3108,6 @@ bound_var_t::ref ast::literal_expr_t::resolve_instantiation(
 						scope,
 						{"__box__"},
 						shared_from_this(),
-						scope->get_outbound_context(),
 						get_args_type({native_type}));
 
 				if (!!status) {
@@ -3358,7 +3156,6 @@ bound_var_t::ref ast::literal_expr_t::resolve_instantiation(
 						scope,
 						{"float"},
 						shared_from_this(),
-						scope->get_outbound_context(),
 						get_args_type({native_type}));
 
 				if (!!status) {
@@ -3401,8 +3198,7 @@ bound_var_t::ref ast::reference_expr_t::resolve_overrides(
 
 	/* ok, we know we've got some variable here */
 	auto bound_var = get_callable(status, builder, scope, token.text,
-			shared_from_this(), scope->get_outbound_context(),
-			get_args_type(args));
+			shared_from_this(), get_args_type(args));
 	if (!!status) {
 		return bound_var;
 	} else {

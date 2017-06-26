@@ -7,6 +7,7 @@
 #include "logger.h"
 #include <iostream>
 
+#if 0
 bound_type_t::refs upsert_bound_types(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
@@ -27,6 +28,7 @@ bound_type_t::refs upsert_bound_types(
 	}
 	return bound_args;
 }
+#endif
 
 bound_type_t::ref create_ref_ptr_type(
 		llvm::IRBuilder<> &builder,
@@ -509,39 +511,6 @@ bound_type_t::ref create_bound_type(
 	return nullptr;
 }
 
-bound_type_t::ref upsert_bound_type(
-		status_t &status,
-	   	llvm::IRBuilder<> &builder,
-		ptr<scope_t> scope,
-	   	types::type_t::ref type)
-{
-	if (!!status) {
-		type = type->rebind(scope->get_type_variable_bindings());
-
-		auto signature = type->get_signature();
-		auto bound_type = scope->get_bound_type(signature);
-		if (bound_type != nullptr) {
-			/* this case is critical for breaking cycles during structure
-			 * instantiation */
-			return bound_type;
-		} else {
-			/* we believe that this type does not exist. let's build it */
-			bound_type = create_bound_type(status, builder, scope, type);
-
-			if (!!status) {
-				return bound_type;
-			}
-
-			user_error(status, type->get_location(),
-					"unable to find a definition for %s in scope " c_id("%s"),
-					type->str().c_str(),
-					scope->get_name().c_str());
-		}
-	}
-	assert(!status);
-	return nullptr;
-}
-
 bound_type_t::ref get_function_return_type(
 		scope_t::ref scope,
 		bound_type_t::ref function_type)
@@ -565,7 +534,6 @@ std::pair<bound_var_t::ref, bound_type_t::ref> instantiate_tuple_ctor(
 		status_t &status, 
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
-		types::type_t::ref type_fn_context,
 		bound_type_t::refs args,
 		identifier::ref id,
 		const ast::item_t::ref &node)
@@ -579,7 +547,7 @@ std::pair<bound_var_t::ref, bound_type_t::ref> instantiate_tuple_ctor(
 
 		if (!!status) {
 			bound_var_t::ref tuple_ctor = get_or_create_tuple_ctor(status, builder,
-					scope, type_fn_context, data_type, id, node);
+					scope, data_type, id, node);
 
 			if (!!status) {
 				return {tuple_ctor, data_type};
@@ -595,7 +563,6 @@ std::pair<bound_var_t::ref, bound_type_t::ref> instantiate_tagged_tuple_ctor(
 		status_t &status, 
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
-		types::type_t::ref type_fn_context,
 		identifier::ref id,
 		const ast::item_t::ref &node,
 		types::type_t::ref type)
@@ -611,7 +578,7 @@ std::pair<bound_var_t::ref, bound_type_t::ref> instantiate_tagged_tuple_ctor(
 		if (!!status) {
 			debug_above(4, log(log_info, "found bound type %s", data_type->str().c_str()));
 			bound_var_t::ref tagged_tuple_ctor = get_or_create_tuple_ctor(status, builder,
-					scope, type_fn_context, data_type, id, node);
+					scope, data_type, id, node);
 
 			if (!!status) {
 				return {tagged_tuple_ctor, data_type};
@@ -665,7 +632,6 @@ bound_var_t::ref maybe_get_dtor(
 			program_scope,
 			{"__dtor__"},
 			location,
-			program_scope->get_outbound_context(),
 			type_args({type_raw_pointer(data_type->get_type())}, {}),
 			fn_dtors);
 
@@ -673,9 +639,8 @@ bound_var_t::ref maybe_get_dtor(
 		if (dtor != nullptr) {
 			return dtor;
 		} else {
-			debug_above(2, user_info(status, location, "no __dtor__ found for type %s in context %s",
-					data_type->str().c_str(),
-					program_scope->get_outbound_context()->str().c_str()));
+			debug_above(2, user_info(status, location, "no __dtor__ found for type %s",
+					data_type->str().c_str()));
 			return nullptr;
 		}
 	}
@@ -828,7 +793,6 @@ bound_var_t::ref get_or_create_tuple_ctor(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
-		types::type_t::ref type_fn_context,
 		bound_type_t::ref data_type,
 		identifier::ref id,
 		const ast::item_t::ref &node)
@@ -868,7 +832,7 @@ bound_var_t::ref get_or_create_tuple_ctor(
 			llvm::IRBuilderBase::InsertPointGuard ipg(builder);
 
 			auto function = llvm_start_function(status, builder, scope, node,
-					type_fn_context, args, data_type, name);
+					args, data_type, name);
 
 			life_t::ref life = make_ptr<life_t>(status, lf_function);
 

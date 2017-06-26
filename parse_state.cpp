@@ -13,7 +13,6 @@ parse_state_t::parse_state_t(
 	filename(filename),
 	lexer(lexer),
 	status(status),
-	type_macros(type_macros),
 	comments(comments)
 {
 	advance();

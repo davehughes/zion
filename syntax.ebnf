@@ -20,13 +20,11 @@ statement      ::=
 
 expression ::=
   	  ref_expr
-	| '*' ref_expr
-	| callsite_expr
 	| literal
 	| ( ref_expr '?' expression ':' expression )
+	| ( ref_expr '(' ( ref_expr ( ',' ref_expr )* )? ')' )
 	| ( do '{' statement* expression '}' )
 
-callsite_expr  ::= ref_expr '(' ( ref_expr ( ',' ref_expr )* )? ')'
 ref_expr       ::= identifier ( '.' identifier )*
 literal        ::= integer | string | boolean | float
 

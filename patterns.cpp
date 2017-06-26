@@ -7,7 +7,7 @@
 #include "llvm_types.h"
 #include <iostream>
 
-bound_var_t::ref ast::when_block_t::resolve_instantiation(
+bound_var_t::ref ast::match_block_t::resolve_instantiation(
 		status_t &status,
 	   	llvm::IRBuilder<> &builder,
 	   	scope_t::ref block_scope,
@@ -15,6 +15,8 @@ bound_var_t::ref ast::when_block_t::resolve_instantiation(
 	   	local_scope_t::ref *,
 	   	bool *returns) const
 {
+
+#if 0
 	assert(life->life_form == lf_statement);
 
 	local_scope_t::ref when_scope;
@@ -53,6 +55,7 @@ bound_var_t::ref ast::when_block_t::resolve_instantiation(
             }
         }
 	}
+#endif
 
 	assert(!status);
 	return nullptr;
@@ -150,6 +153,7 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 		refs::const_iterator end_iter,
 		ptr<const ast::block_t> else_block) const
 {
+#if 0
 	assert(value != nullptr);
 	assert(value_name != nullptr);
 
@@ -157,8 +161,7 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 	local_scope_t::ref if_scope;
 
 	assert(token.text == "is");
-	auto type_to_match = this->type->rebind(
-				scope->get_type_variable_bindings());
+	auto type_to_match = this->type_name;
 
 	if (!!status) {
 		/* get the bound type for this type pattern */
@@ -295,6 +298,7 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 			}
 		}
 	}
+#endif
 
 	assert(!status);
     return nullptr;

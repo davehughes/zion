@@ -17,10 +17,9 @@ enum token_kind_t {
 	tk_comma, /* , */
 	tk_lcurly, /* { */
 	tk_rcurly, /* } */
-	tk_lapply, /* < */
-	tk_rapply, /* > */
 	tk_lsquare, /* [ */
 	tk_rsquare, /* ] */
+	tk_question, /* ? */
 	tk_colon, /* : */
 	tk_dot, /* . */
 	tk_semicolon, /* ; */
@@ -39,6 +38,8 @@ enum token_kind_t {
 	tk_integer, /* [0-9]+ */
 	tk_string, /* "string literal" */
 
+	tk_as,
+
 	tk_line, /* line */
 	tk_if, /* if */
 	tk_else, /* else */
@@ -52,7 +53,7 @@ enum token_kind_t {
 	tk_star,    /* * */
 
 	// Dependency tokens
-	tk_program, /* program */
+	tk_module, /* module */
 	tk_link, /* link */
 };
 

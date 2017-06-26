@@ -49,30 +49,10 @@ namespace ast {
 	typeid_expr_t::typeid_expr_t(ptr<expression_t> expr) : expr(expr) {
 	}
 
-	sizeof_expr_t::sizeof_expr_t(types::type_t::ref type) : type(type) {
+	sizeof_expr_t::sizeof_expr_t(types::signature type_name) : type_name(type_name) {
 	}
 
-	type_decl_t::type_decl_t(identifier::refs type_variables) :
-		type_variables(type_variables)
-	{
-	}
-
-	type_sum_t::type_sum_t(types::type_t::ref type) :
-		type(type)
-	{
-	}
-
-	dimension_t::dimension_t(atom name, types::type_t::ref type) :
-		name(name), type(type)
-	{
-	}
-
-	type_product_t::type_product_t(
-			types::type_t::ref type,
-			identifier::set type_variables) :
-		type(type),
-		type_variables(type_variables)
-	{
+	type_decl_t::type_decl_t() {
 	}
 
     atom var_decl_t::get_symbol() const {
@@ -83,20 +63,13 @@ namespace ast {
         return token.location;
     }
 
-    types::type_t::ref var_decl_t::get_type() const {
-        return type;
-    }
-
-    bool var_decl_t::has_initializer() const {
-        return initializer != nullptr;
-    }
-
     bound_var_t::ref var_decl_t::resolve_initializer(
             status_t &status,
             llvm::IRBuilder<> &builder,
             scope_t::ref scope,
             life_t::ref life) const
     {
-        return initializer->resolve_instantiation(status, builder, scope, life, nullptr, nullptr);
+        return initializer->resolve_expression(
+				status, builder, scope, life);
     }
 }

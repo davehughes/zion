@@ -77,8 +77,7 @@ bound_var_t::ref bind_ctor_to_scope(
 			 * whether this ctor already exists. if so, we'll just return it. if
 			 * not, we'll generate it. */
 			auto tuple_pair = instantiate_tagged_tuple_ctor(status, builder,
-					scope, function->inbound_context, id, node,
-					function->return_type);
+					scope, id, node, function->return_type);
 
 			if (!!status) {
 				debug_above(5, log(log_info, "created a ctor %s", tuple_pair.first->str().c_str()));
@@ -222,7 +221,6 @@ types::type_t::ref instantiate_data_ctor_type(
 						id->str().c_str()));
 
 			types::type_function_t::ref data_ctor_sig = type_function(
-					scope->get_inbound_context(),
 					type_args(struct_->dimensions),
 					ctor_return_type);
 

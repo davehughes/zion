@@ -33,7 +33,6 @@ void add_bindings_to_make_type_concrete(
 unification_t var_t::accepts_callsite(
 		llvm::IRBuilder<> &builder,
 		ptr<scope_t> scope,
-		types::type_t::ref type_fn_context,
 	   	types::type_args_t::ref args) const
 {
 	/* get the args out of the sig */
@@ -51,7 +50,7 @@ unification_t var_t::accepts_callsite(
 	 * deliberately in order to claim access to a separate module's context */
 	auto u = unify(
 			fn_type,
-		   	type_function(type_fn_context, args, type_variable(INTERNAL_LOC())),
+			type_function(args, type_variable(INTERNAL_LOC())),
 		   	env);
 
 	add_bindings_to_make_type_concrete(fn_type->args, u.bindings);

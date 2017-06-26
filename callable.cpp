@@ -27,12 +27,11 @@ bound_var_t::ref check_func_vs_callsite(
 		scope_t::ref scope,
 		location_t location,
 		var_t::ref fn,
-		types::type_t::ref type_fn_context,
 		types::type_args_t::ref args)
 {
 	assert(!!status);
 	assert(args->ftv_count() == 0 && "how did you get abstract arguments? are you a wizard?");
-	unification_t unification = fn->accepts_callsite(builder, scope, type_fn_context, args);
+	unification_t unification = fn->accepts_callsite(builder, scope, args);
 	if (unification.result) {
 		if (auto bound_fn = dyncast<const bound_var_t>(fn)) {
 			/* this function has already been bound */
@@ -73,14 +72,12 @@ bound_var_t::ref maybe_get_callable(
 		scope_t::ref scope,
 		atom alias,
 		location_t location,
-		types::type_t::ref type_fn_context,
 		types::type_args_t::ref args,
 		var_t::refs &fns)
 {
-	debug_above(3, log(log_info, "maybe_get_callable(..., scope=%s, alias=%s, type_fn_context=%s, args=%s, ...)",
+	debug_above(3, log(log_info, "maybe_get_callable(..., scope=%s, alias=%s, args=%s, ...)",
 				scope->get_name().c_str(),
 				alias.c_str(),
-				type_fn_context->str().c_str(),
 				args->str().c_str()));
 
     llvm::IRBuilderBase::InsertPointGuard ipg(builder);
@@ -99,7 +96,7 @@ bound_var_t::ref maybe_get_callable(
 				continue;
             }
 			bound_var_t::ref callable = check_func_vs_callsite(status, builder,
-					scope, location, fn, type_fn_context, args);
+					scope, location, fn, args);
 
 			if (!status) {
 				assert(callable == nullptr);
@@ -135,14 +132,13 @@ bound_var_t::ref get_callable(
 		scope_t::ref scope,
 		atom alias,
 		const ptr<const ast::item_t> &callsite,
-		types::type_t::ref outbound_context,
 		types::type_args_t::ref args)
 {
 	var_t::refs fns;
 	// TODO: potentially allow fake calling contexts by adding syntax to the
 	// callsite
 	auto callable = maybe_get_callable(status, builder, scope, alias,
-			callsite->get_location(), outbound_context, args, fns);
+			callsite->get_location(), args, fns);
 
 	if (!!status) {
 		if (callable != nullptr) {
@@ -158,7 +154,6 @@ bound_var_t::ref get_callable(
 				std::stringstream ss;
 				ss << "unable to resolve overloads for " << C_ID << alias << C_RESET;
 				ss << " at " << callsite->str() << args->str();
-				ss << " from context " << outbound_context->str();
 				user_error(status, *callsite, "%s", ss.str().c_str());
 
 				if (debug_level() >= 0) {
@@ -191,8 +186,7 @@ bound_var_t::ref call_program_function(
 	auto program_scope = scope->get_program_scope();
     /* get or instantiate a function we can call on these arguments */
     bound_var_t::ref function = get_callable(
-			status, builder, program_scope, function_name, callsite,
-			program_scope->get_inbound_context(), args);
+			status, builder, program_scope, function_name, callsite, args);
 
     if (!!status) {
 		return make_call_value(status, builder, callsite->get_location(), scope,

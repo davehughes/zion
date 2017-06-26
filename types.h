@@ -193,9 +193,8 @@ namespace types {
 
 	struct type_function_t : public type_t {
 		typedef ptr<const type_function_t> ref;
-		type_function_t(type_t::ref inbound_context, types::type_args_t::ref args, type_t::ref return_type);
+		type_function_t(types::type_args_t::ref args, type_t::ref return_type);
 
-		type_t::ref inbound_context;
 		type_args_t::ref args;
 		type_t::ref return_type;
 
@@ -273,7 +272,7 @@ types::type_module_t::ref type_module(types::type_t::ref module);
 types::type_ref_t::ref type_ref(types::type_t::ref element);
 types::type_struct_t::ref type_struct(types::type_t::refs dimensions, types::name_index_t name_index);
 types::type_args_t::ref type_args(types::type_t::refs args, types::name_index_t name_index={});
-types::type_function_t::ref type_function(types::type_t::ref inbound_context, types::type_args_t::ref args, types::type_t::ref return_type);
+types::type_function_t::ref type_function(types::type_args_t::ref args, types::type_t::ref return_type);
 types::type_t::ref type_sum(types::type_t::refs options);
 types::type_t::ref type_sum_safe(status_t &status, types::type_t::refs options);
 types::type_t::ref type_maybe(types::type_t::ref just);
@@ -292,10 +291,8 @@ std::string str(types::type_t::map coll);
 std::ostream& operator <<(std::ostream &out, const types::type_t::ref &type);
 
 /* helper functions */
-types::type_t::ref get_function_type_context(types::type_t::ref function_type);
 types::type_t::ref get_function_return_type(types::type_t::ref function_type);
 types::type_t::pair make_type_pair(std::string fst, std::string snd, identifier::set generics);
 
-types::type_t::ref parse_type_expr(std::string input, identifier::set generics, identifier::ref module_id);
 bool get_type_variable_name(types::type_t::ref type, atom &name);
 std::ostream &join_dimensions(std::ostream &os, const types::type_t::refs &dimensions, const types::name_index_t &name_index, const types::type_t::map &bindings);

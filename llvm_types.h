@@ -3,29 +3,31 @@
 #include "bound_var.h"
 #include "ast.h"
 
+template <typename T>
+bound_type_t::ref upsert_bound_type(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		ptr<scope_t> scope,
+		T t)
+{
+	return null_impl();
+}
+
+template <typename T>
 bound_type_t::refs upsert_bound_types(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		ptr<scope_t> scope,
-		types::type_t::refs types);
-
-bound_type_t::ref upsert_bound_type(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		ptr<scope_t> scope,
-		types::type_t::ref type);
-
-bound_type_t::ref upsert_bound_type(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		ptr<scope_t> scope,
-		types::type_t::ref type);
+		T t)
+{
+	not_impl();
+	return bound_type_t::refs{};
+}
 
 std::pair<bound_var_t::ref, bound_type_t::ref> instantiate_tuple_ctor(
 		status_t &status, 
 		llvm::IRBuilder<> &builder,
 		ptr<scope_t> scope,
-		types::type_t::ref type_fn_context,
 		bound_type_t::refs args,
 		identifier::ref id,
 		const ptr<const ast::item_t> &node);
@@ -34,7 +36,6 @@ std::pair<bound_var_t::ref, bound_type_t::ref> instantiate_tagged_tuple_ctor(
 		status_t &status, 
 		llvm::IRBuilder<> &builder,
 		ptr<scope_t> scope,
-		types::type_t::ref type_fn_context,
 		identifier::ref id,
 		const ptr<const ast::item_t> &node,
 		types::type_t::ref type);
@@ -43,7 +44,6 @@ bound_var_t::ref get_or_create_tuple_ctor(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
-		types::type_t::ref type_fn_context,
 		bound_type_t::ref data_type,
 		identifier::ref id,
 		const ast::item_t::ref &node);
