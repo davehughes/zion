@@ -29,18 +29,13 @@ struct parse_state_t {
 	void warning(const char *format, ...);
 	void error(const char *format, ...);
 
-	bool line_broke() const { return newline || prior_token.tk == tk_semicolon; }
 	token_t token;
 	token_t prior_token;
 	atom filename;
 	identifier::ref module_id;
 	lexer_t &lexer;
 	status_t &status;
-	type_macros_t type_macros;
 	std::vector<token_t> *comments;
-
-	/* keep track of the current function declaration parameter position */
-	int argument_index;
 
 private:
 	bool newline = false;

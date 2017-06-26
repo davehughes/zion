@@ -434,20 +434,16 @@ namespace types {
 	}
 
 	type_function_t::type_function_t(
-			type_t::ref inbound_context,
 		   	type_args_t::ref args,
 			type_t::ref return_type) :
-		inbound_context(inbound_context), args(args), return_type(return_type)
+		args(args), return_type(return_type)
 	{
-		assert(inbound_context != nullptr);
 		assert(args != nullptr);
 		assert(return_type != nullptr);
 	}
 
 	std::ostream &type_function_t::emit(std::ostream &os, const map &bindings) const {
-		os << "[";
-		inbound_context->emit(os, bindings);
-		os << "] def ";
+		os << tkstr(tk_fn) << " ";
 		args->emit(os, bindings);
 		os << " ";
 		return return_type->emit(os, bindings);
@@ -475,8 +471,7 @@ namespace types {
 		types::type_args_t::ref rebound_args = dyncast<const types::type_args_t>(
 			   	args->rebind(bindings));
 		assert(args != nullptr);
-		return ::type_function(inbound_context,
-				rebound_args, return_type->rebind(bindings));
+		return ::type_function(rebound_args, return_type->rebind(bindings));
 	}
 
 	location_t type_function_t::get_location() const {
@@ -829,46 +824,6 @@ types::type_t::ref get_function_return_type(types::type_t::ref function_type) {
 
 std::ostream &operator <<(std::ostream &os, identifier::ref id) {
 	return os << id->get_name();
-}
-
-types::type_t::pair make_type_pair(std::string fst, std::string snd, identifier::set generics) {
-	debug_above(4, log(log_info, "creating type pair with (%s, %s) and generics [%s]",
-				fst.c_str(), snd.c_str(),
-			   	join(generics, ", ").c_str()));
-
-	auto module_id = make_iid("tests");
-	return types::type_t::pair{
-		parse_type_expr(fst, generics, module_id),
-	   	parse_type_expr(snd, generics, module_id)};
-}
-
-types::type_t::ref parse_type_expr(std::string input, identifier::set generics, identifier::ref module_id) {
-	status_t status;
-	std::istringstream iss(input);
-	lexer_t lexer("", iss);
-	parse_state_t ps(status, "", lexer, {}, nullptr);
-	if (module_id != nullptr) {
-		ps.module_id = module_id;
-	} else {
-		ps.module_id = make_iid("__parse_type_expr__");
-	}
-	types::type_t::ref type = parse_maybe_type(ps, {}, {}, generics);
-	if (!!status) {
-		return type;
-	} else {
-		panic("bad type");
-		return null_impl();
-	}
-}
-
-bool get_type_variable_name(types::type_t::ref type, atom &name) {
-    if (auto ptv = dyncast<const types::type_variable_t>(type)) {
-		name = ptv->id->get_name();
-		return true;
-	} else {
-		return false;
-	}
-	return false;
 }
 
 std::string str(types::type_t::refs refs) {

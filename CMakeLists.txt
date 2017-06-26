@@ -73,7 +73,6 @@ add_executable(llz
 	parser.cpp
 	patterns.cpp
 	phase_scope_setup.cpp
-	render.cpp
 	scopes.cpp
 	signature.cpp
 	status.cpp

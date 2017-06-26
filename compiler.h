@@ -38,7 +38,7 @@ struct compiler_t {
 
 	std::vector<token_t> get_comments() const;
 	ptr<const ast::module_t> get_module(status_t &status, atom key_alias);
-	void set_module(status_t &status, std::string filename, ptr<ast::module_t> module);
+	void set_module(status_t &status, std::string filename, ptr<const ast::module_t> module);
 	llvm::Module *llvm_load_ir(status_t &status, std::string filename);
 	llvm::Module *llvm_create_module(atom module_name);
 	llvm::Module *llvm_get_program_module();

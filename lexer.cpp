@@ -174,6 +174,10 @@ bool lexer_t::get_token(
 				tk = tk_rcurly;
 				gts = gts_end;
 				break;
+			case '?':
+				tk = tk_question;
+				gts = gts_end;
+				break;
 			};
 
 			if (gts == gts_start) {

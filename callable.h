@@ -35,7 +35,6 @@ bound_var_t::ref get_callable(
 		scope_t::ref scope,
 		atom alias,
 		const ptr<const ast::item_t> &obj,
-		types::type_t::ref outbound_context,
 		types::type_args_t::ref sig_args);
 
 /* maybe_get_callable is supposed to be more lenient and not cause errors,
@@ -47,7 +46,6 @@ bound_var_t::ref maybe_get_callable(
 		scope_t::ref scope,
 		atom alias,
 		location_t location,
-		types::type_t::ref type_fn_context,
 		types::type_args_t::ref sig_args,
 		var_t::refs &fns);
 

@@ -21,34 +21,17 @@
    	return false; \
 } else {}
 
-std::vector<token_kind> get_tks(lexer_t &lexer, bool include_newlines, std::vector<token_t> &comments) {
-	std::vector<token_kind> tks;
+std::vector<token_kind_t> get_tks(lexer_t &lexer, std::vector<token_t> &comments) {
+	std::vector<token_kind_t> tks;
 	token_t token;
-	bool newline = false;
-	while (lexer.get_token(token, newline, &comments)) {
-		if (include_newlines && newline && token.tk != tk_outdent) {
-			tks.push_back(tk_newline);
-		}
+	while (lexer.get_token(token, &comments)) {
 		tks.push_back(token.tk);
 	}
 	return tks;
 }
 
-std::vector<token_kind_t> get_lltks(lexer_t &lexer, std::vector<token_t> &comments) {
-	std::vector<token_kind_t> lltks;
-	token_t token;
-	while (lexer.get_token(token, &comments)) {
-		lltks.push_back(token.lltk);
-	}
-	return lltks;
-}
-
-const char *to_str(token_kind tk) {
+const char *to_str(token_kind_t tk) {
 	return tkstr(tk);
-}
-
-const char *to_str(token_kind_t lltk) {
-	return lltkstr(lltk);
 }
 
 template <typename T>
@@ -91,10 +74,13 @@ void log_list(log_level_t level, const char *prefix, T &xs) {
 	log(level, "%s [%s]", prefix, ss.str().c_str());
 }
 
-bool check_lexer(std::string text, std::vector<token_kind> expect_tks, bool include_newlines, std::vector<token_t> &comments) {
+bool check_lexer(
+		std::string text, std::vector<token_kind_t> expect_tks,
+	   	std::vector<token_t> &comments)
+{
 	std::istringstream iss(text);
 	lexer_t lexer("check_lexer", iss);
-	std::vector<token_kind> result_tks = get_tks(lexer, include_newlines, comments);
+	std::vector<token_kind_t> result_tks = get_tks(lexer, comments);
 	if (!check_tks_match(expect_tks, result_tks)) {
 		log(log_info, "for text: '%s'", text.c_str());
 		log_list(log_info, "expected", expect_tks);
@@ -104,56 +90,26 @@ bool check_lexer(std::string text, std::vector<token_kind> expect_tks, bool incl
 	return true;
 }
 
-bool check_lexer(std::string text, std::vector<token_kind_t> expect_lltks, std::vector<token_t> &comments) {
-	std::istringstream iss(text);
-	lexer_t lexer("check_lexer", iss);
-	std::vector<token_kind_t> result_lltks = get_lltks(lexer, comments);
-	if (!check_tks_match(expect_lltks, result_lltks)) {
-		log(log_info, "for text: '%s'", text.c_str());
-		log_list(log_info, "expected", expect_lltks);
-		log_list(log_info, "got     ", result_lltks);
-		return false;
-	}
-	return true;
-}
-
 struct lexer_test_t {
 	std::string text;
-	std::vector<token_kind> tks;
+	std::vector<token_kind_t> tks;
 };
 
 typedef std::vector<lexer_test_t> lexer_tests;
 
-bool lexer_test_comments(const lexer_tests &tests, std::vector<token_t> &comments, bool include_newlines=false) {
+bool lexer_test_comments(const lexer_tests &tests, std::vector<token_t> &comments) {
 	for (auto &test : tests) {
-		if (!check_lexer(test.text, test.tks, include_newlines, comments)) {
+		if (!check_lexer(test.text, test.tks, comments)) {
 			return false;
 		}
 	}
 	return true;
 }
 
-bool lexer_test(const lexer_tests &tests, bool include_newlines=false) {
+bool lexer_test(const lexer_tests &tests) {
 	std::vector<token_t> comments;
 	for (auto &test : tests) {
-		if (!check_lexer(test.text, test.tks, include_newlines, comments)) {
-			return false;
-		}
-	}
-	return true;
-}
-
-struct lexer_test_t {
-	std::string text;
-	std::vector<token_kind_t> lltks;
-};
-
-typedef std::vector<lexer_test_t> lexer_tests;
-
-bool lexer_test(const lexer_tests &tests, bool include_newlines=false) {
-	std::vector<token_t> comments;
-	for (auto &test : tests) {
-		if (!check_lexer(test.text, test.lltks, comments)) {
+		if (!check_lexer(test.text, test.tks, comments)) {
 			return false;
 		}
 	}
@@ -163,43 +119,13 @@ bool lexer_test(const lexer_tests &tests, bool include_newlines=false) {
 /*
  * LEXER TESTS
  */
-bool test_lex_newlines() {
+bool test_lex_blocks() {
 	lexer_tests tests = {
-		{"A\n\t(B\n\n)",
-			{tk_identifier, tk_newline,
-				tk_indent, tk_lparen, tk_identifier,
-				tk_rparen, tk_outdent}},
-		{"A\n\t(B\n)",
-			{tk_identifier, tk_newline,
-				tk_indent, tk_lparen, tk_identifier,
-				tk_rparen, tk_outdent}},
-		{"A\n\tB = [\n\t\t(C),\n\t\tD,\n\t]\n(1)",
-			{tk_identifier, tk_newline,
-				tk_indent, tk_identifier, tk_assign, tk_lsquare,
-				tk_lparen, tk_identifier, tk_rparen, tk_comma,
-				tk_identifier, tk_comma,
-				tk_rsquare,
-				tk_outdent, tk_lparen, tk_integer, tk_rparen}},
-		{"A\n\tB", {tk_identifier, tk_newline, tk_indent, tk_identifier, tk_outdent}},
-		{"\nA", {tk_newline, tk_identifier}},
-		{"C\n(q)", {tk_identifier, tk_newline, tk_lparen, tk_identifier, tk_rparen}},
-		{"A\n\tC\n\tD\n(q)", {tk_identifier, tk_newline, tk_indent, tk_identifier, tk_newline, tk_identifier, tk_outdent, tk_lparen, tk_identifier, tk_rparen}},
-	};
-	return lexer_test(tests, true /*include_newlines*/);
-}
-
-bool test_lex_indents() {
-	lexer_tests tests = {
-		{"\tfib(n-1)", {tk_indent, tk_identifier, tk_lparen, tk_identifier, tk_minus, tk_integer, tk_rparen, tk_outdent}},
-		{"A\n\tB", {tk_identifier, tk_indent, tk_identifier, tk_outdent}},
-		{"A\n\tB ", {tk_identifier, tk_indent, tk_identifier, tk_outdent}},
-		{"\nA\n\tB ", {tk_identifier, tk_indent, tk_identifier, tk_outdent}},
-		{"\n\t\nA", {tk_identifier}},
-		{"\nA\n\tB C", {tk_identifier, tk_indent, tk_identifier, tk_identifier, tk_outdent}},
-		{"\nA\n\tB\n\tC", {tk_identifier, tk_indent, tk_identifier, tk_identifier, tk_outdent}},
-		{"\nA\n\tB\n\n\tC", {tk_identifier, tk_indent, tk_identifier, tk_identifier, tk_outdent}},
-		{"A\n\tB\n\t\tC\n\tD", {tk_identifier, tk_indent, tk_identifier, tk_indent, tk_identifier, tk_outdent, tk_identifier, tk_outdent}},
-		{"A\n\tB\n\t\tC\n\t\tD\n\tE", {tk_identifier, tk_indent, tk_identifier, tk_indent, tk_identifier, tk_identifier, tk_outdent, tk_identifier, tk_outdent}},
+		{"A\n\t{ (B\n\n)}",
+			{tk_identifier,
+				tk_lcurly, tk_lparen, tk_identifier,
+				tk_rparen, tk_rcurly}},
+		{"A{\n\tB}", {tk_identifier, tk_lcurly, tk_identifier, tk_rcurly}},
 	};
 	return lexer_test(tests);
 }
@@ -225,16 +151,16 @@ bool test_lex_comments() {
 
 bool test_lex_functions() {
 	lexer_tests tests = {
-		{"def", {tk_def}},
-		{" def", {tk_def}},
-		{"def ", {tk_def}},
+		{"fn", {tk_fn}},
+		{" fn", {tk_fn}},
+		{"fn ", {tk_fn}},
 		{"_def", {tk_identifier}},
 		{"definitely", {tk_identifier}},
-		{"def A", {tk_def, tk_identifier}},
-		{"def A\n", {tk_def, tk_identifier}},
-		{"def A\n\tstatement", {tk_def, tk_identifier, tk_indent, tk_identifier, tk_outdent}},
-		{"def A\n\tstatement\n\tstatement", {tk_def, tk_identifier, tk_indent, tk_identifier, tk_identifier, tk_outdent}},
-		{"def A\n\tpass", {tk_def, tk_identifier, tk_indent, tk_pass, tk_outdent}},
+		{"fn A", {tk_fn, tk_identifier}},
+		{"fn A\n", {tk_fn, tk_identifier}},
+		{"fn A{\tstatement}", {tk_fn, tk_identifier, tk_lcurly, tk_identifier, tk_rcurly}},
+		{"fn A{\tstatement\n\tstatement}", {tk_fn, tk_identifier, tk_lcurly, tk_identifier, tk_identifier, tk_rcurly}},
+		{"fn A{\tpass}", {tk_fn, tk_identifier, tk_lcurly, tk_identifier, tk_rcurly}},
 	};
 	return lexer_test(tests);
 }
@@ -242,7 +168,6 @@ bool test_lex_functions() {
 bool test_lex_module_stuff() {
 	lexer_tests tests = {
 		{"module modules", {tk_module, tk_identifier}},
-		{"module modules @1.0.2", {tk_module, tk_identifier, tk_version}},
 		{"link module foo", {tk_link, tk_module, tk_identifier}},
 	};
 	return lexer_test(tests);
@@ -250,28 +175,14 @@ bool test_lex_module_stuff() {
 
 bool test_lex_operators() {
 	lexer_tests tests = {
-		{"and", {tk_and}},
 		{"( ),{};[]:", {tk_lparen, tk_rparen, tk_comma, tk_lcurly, tk_rcurly, tk_semicolon, tk_lsquare, tk_rsquare, tk_colon}},
-		{"or", {tk_or}},
-		{"not", {tk_not}},
-		{"in", {tk_in}},
-		{"has", {tk_has}},
-		{"not in", {tk_not, tk_in}},
-		{">", {tk_gt}},
-		{"<", {tk_lt}},
-		{">=", {tk_gte}},
-		{"<=", {tk_lte}},
-		{"<a", {tk_lt, tk_identifier}},
-		{">a", {tk_gt, tk_identifier}},
-		{"<=a", {tk_lte, tk_identifier}},
-		{">=a", {tk_gte, tk_identifier}},
 	};
 	return lexer_test(tests);
 }
 
 bool test_lex_dependency_keywords() {
 	lexer_tests tests = {
-		{"to tote", {tk_to, tk_identifier}},
+		{"tote", {tk_identifier}},
 		{"link linker", {tk_link, tk_identifier}},
 		{"module modules # ignore this", {tk_module, tk_identifier}},
 	};
@@ -280,42 +191,30 @@ bool test_lex_dependency_keywords() {
 
 bool test_lex_literals() {
 	lexer_tests tests = {
-		{":atom \"hello world\\n\" 13493839", {tk_atom, tk_string, tk_integer}},
+		{"\"hello world\\n\" 13493839", {tk_string, tk_integer}},
 		{"\"\"", {tk_string}},
 		{"0", {tk_integer}},
-		{"0r", {tk_raw_integer}},
-		{"10", {tk_integer}},
-		{"10r", {tk_raw_integer}},
 	};
 	return lexer_test(tests);
 }
 
 bool test_lex_syntax() {
 	lexer_tests tests = {
-		{"retur not note", {tk_identifier, tk_not, tk_identifier}},
-		{"return note not", {tk_return, tk_identifier, tk_not}},
-		{"return var = == pass.pass..", {tk_return, tk_var, tk_assign, tk_equal, tk_pass, tk_dot, tk_pass, tk_double_dot}},
-		{"not", {tk_not}},
+		{"retur note", {tk_identifier, tk_identifier}},
+		{"return note not", {tk_return, tk_identifier, tk_identifier}},
+		{"return var = == pass.pass..", {tk_return, tk_var, tk_assign, tk_identifier, tk_dot, tk_identifier}},
 		{"nil", {tk_identifier}},
-		{"while", {tk_while}},
+		{"loop", {tk_loop}},
 		{"if", {tk_if}},
-		{"when", {tk_when}},
-		{"with", {tk_with}},
-		{"__get_typeid__", {tk_get_typeid}},
 		{"else", {tk_else}},
-		{"elif", {tk_elif}},
 		{"break", {tk_break}},
 		{"breakfast", {tk_identifier}},
 		{"continue", {tk_continue}},
 		{"continually", {tk_identifier}},
-		{"while true\n\tfoo()", {tk_while, tk_identifier, tk_indent, tk_identifier, tk_lparen, tk_rparen, tk_outdent}},
-		{"not in", {tk_not, tk_in}},
+		{"loop {\n\tfoo()}", {tk_loop, tk_lcurly, tk_identifier, tk_lparen, tk_rparen, tk_rcurly}},
 		{"true false", {tk_identifier, tk_identifier}},
-		{" not", {tk_not}},
 		{" nothing", {tk_identifier}},
-		{" not\n\tnot", {tk_not, tk_indent, tk_not, tk_outdent}},
-		{"? + - * / %", {tk_maybe, tk_plus, tk_minus, tk_times, tk_divide_by, tk_mod}},
-		{"+=-=*=/=%=:=?=", {tk_plus_eq, tk_minus_eq, tk_times_eq, tk_divide_by_eq, tk_mod_eq, tk_becomes, tk_maybe_eq}},
+		{"? + - * / %", {tk_question, tk_star}},
 	};
 	return lexer_test(tests);
 }
@@ -323,29 +222,24 @@ bool test_lex_syntax() {
 bool test_lex_floats() {
 	lexer_tests tests = {
 		{"1.0", {tk_float}},
-		{"1.0r", {tk_raw_float}},
 		{"1.0e1", {tk_float}},
-		{"1.0e1r", {tk_raw_float}},
 		{"123e12 # whatever this is not here\n", {tk_float}},
-		{"123e12r # whatever this is not here\n", {tk_raw_float}},
-		{"-123.29382974284e12", {tk_minus, tk_float}},
-		{"-123.29382974284e12r", {tk_minus, tk_raw_float}},
+		{"123.29382974284e12", {tk_float}},
 		{"h(3.14159265)", {tk_identifier, tk_lparen, tk_float, tk_rparen}},
-		{"h(3.14159265r)", {tk_identifier, tk_lparen, tk_raw_float, tk_rparen}},
 	};
 	return lexer_test(tests);
 }
 
 bool test_lex_types() {
 	lexer_tests tests = {
-		{"type x struct {x X y Y }", {
-			lltk_type, lltk_identifier, lltk_struct,
-			lltk_lcurly, lltk_identifier, lltk_identifier,
-			lltk_identifier, lltk_identifier, lltk_rcurly}},
+		{"type x struct { x X y Y }", {
+			tk_type, tk_identifier, tk_struct,
+			tk_lcurly, tk_identifier, tk_identifier,
+			tk_identifier, tk_identifier, tk_rcurly}},
 		{"type \"List{int}\" polymorph match :\r\n  ; *", {
-			lltk_type, lltk_string, lltk_polymorph,
-			lltk_match, lltk_colon, lltk_semicolon,
-			lltk_star}},
+			tk_type, tk_string, tk_polymorph,
+			tk_match, tk_colon, tk_semicolon,
+			tk_star}},
 	};
 	return lexer_test(tests);
 }
@@ -412,107 +306,39 @@ bool check_parse(std::string text, std::string filename = test_module_name) {
  * PARSER TESTS
  */
 bool test_parse_minimal_module() {
-	return check_parse<ast::module_t>("module minimal @0.1.0");
+	return check_parse<ast::module_t>("module minimal");
 }
 
 bool test_parse_module_one_function() {
-	return check_parse<ast::module_t>("module foobar @0.1.0\n\ndef foo()\n\tpass");
-}
-
-ptr<ast::plus_expr_t> make_one_plus_two() {
-	auto expect = ast::create<ast::plus_expr_t>({{"", 1, 3}, tk_plus, "+"});
-
-	expect->lhs = ast::create<ast::literal_expr_t>({{"", 1, 1}, tk_integer, "1"});
-	expect->rhs = ast::create<ast::literal_expr_t>({{"", 1, 5}, tk_integer, "2"});
-	return expect;
-}
-
-bool test_parse_integer_add() {
-	return check_parse<ast::expression_t>("1 + 2");
-}
-
-bool test_parse_return_integer_add() {
-	return check_parse<ast::expression_t>("1 + \"2\"");
+	return check_parse<ast::module_t>("module foobar\n\nfn foo(){\n\treturn\n}");
 }
 
 bool test_parse_module_function_with_return_plus_expr() {
 	return check_parse<ast::module_t>(
-			"module foobar @0.1.0\ndef foo()\n\treturn 1 + 2");
-}
-
-bool test_parse_math_expression() {
-	return check_parse<ast::expression_t>("(1 + 2) * -92323");
+			"module foobar fn foo() void { return }");
 }
 
 bool test_parse_array_literal() {
-	return check_parse<ast::expression_t>("[0, 1, 2]");
-}
-
-bool test_parse_multiple_pluses() {
-	return check_parse<ast::expression_t>("1 + 2 + 3");
-}
-
-bool test_parse_multiple_minuses() {
-	return check_parse<ast::expression_t>("1 - 2 - 3");
-}
-
-bool test_parse_multiple_times() {
-	return check_parse<ast::expression_t>("0 * 1 * 2 / 3");
-}
-
-bool test_parse_multiple_dots() {
-	return check_parse<ast::expression_t>("a.b.c.d.e.f");
-}
-
-bool test_parse_multiple_logical_ops_1() {
-	return check_parse<ast::expression_t>("1 and 2 or 3");
-}
-
-bool test_parse_multiple_logical_ops_2() {
-	return check_parse<ast::expression_t>("1 or 2 and 3");
-}
-
-bool test_parse_multiple_logical_ops_3() {
-	return check_parse<ast::expression_t>("1 and 2 and 3 and 4");
-}
-
-bool test_parse_multiple_logical_ops_4() {
-	return check_parse<ast::expression_t>("1 or 2 or 3 or 4");
-}
-
-bool test_parse_mixed_precedences() {
-	return check_parse<ast::expression_t>(
-			"true and -a.b(false, -1 or 2 + 3 and 3 * 4).zion_rules.sour");
-}
-
-
-bool test_parse_recursive_function_call() {
-	return check_parse<ast::module_t>(
-		   	"module math @1.0\n"
-			"def fib(n int) int\n"
-			"\tif n < 2\n"
-			"\t\treturn n\n"
-			"\treturn fib(n-2) + fib(n-1)",
-			"test" /*module*/);
+	return check_parse<ast::expression_t>("[]int [0, 1, 2]");
 }
 
 bool test_parse_if_else() {
 	return check_parse<ast::module_t>(
-		   	"module minmax @1.0\n"
-			"def min(m int, n int) int\n"
-			"\tif n < m\n"
-			"\t\treturn n\n"
-			"\telif m < n\n"
-			"\t\treturn m\n"
-			"\telse\n"
-			"\t\treturn m\n",
+		   	"module minmax\n"
+			"fn foo(m int, n int) int {"
+			"\tif n {"
+			"\t\treturn n }\n"
+			"\telse if m {\n"
+			"\t\treturn m }\n"
+			"\telse {\n"
+			"\t\treturn m}\n",
 			"test" /*module*/);
 }
 
 bool test_parse_single_line_when() {
 	return check_parse<ast::module_t>(
 			"module _\n"
-			"def check() int\n"
+			"fn check() int\n"
 			"\twhen x is X\n"
 			"\t\treturn 1\n"
 			"\treturn 1\n"
@@ -565,7 +391,7 @@ bool test_parse_link_extern_module() {
 bool test_parse_link_extern_function() {
 	return check_parse<ast::module_t>(
 		   	"module www @1.3.2\n"
-			"link def open(filename str, mode str) int\n");
+			"link fn open(filename str, mode str) int\n");
 }
 
 struct expression_check {
@@ -916,10 +742,9 @@ auto test_descs = std::vector<test_desc>{
 	T(test_lex_comments),
 	T(test_lex_dependency_keywords),
 	T(test_lex_functions),
-	T(test_lex_indents),
 	T(test_lex_literals),
 	T(test_lex_module_stuff),
-	T(test_lex_newlines),
+	T(test_lex_blocks),
 	T(test_lex_operators),
 	T(test_lex_syntax),
 	T(test_lex_floats),
@@ -959,99 +784,6 @@ auto test_descs = std::vector<test_desc>{
 	T(test_parse_recursive_function_call),
 	T(test_parse_single_function_call),
 	T(test_parse_semicolon_line_break),
-	{
-		"test_parse_types",
-		[] () -> bool {
-			identifier::set generics = {make_iid("T"), make_iid("Q")};
-			auto module_id = make_iid("M");
-
-			auto parses = std::vector<std::pair<std::string, std::string>>{{
-				{"any a", "(any a)"},
-				{"any", "(any __1)"},
-				/* parsing type variables has monotonically increasing side effects */
-				{"any", "(any __1)"},
-				{"void", "M/void"},
-				{"map{int, int}", "M/map{M/int}{M/int}"},
-				{"map{any b, any c}", "M/map{(any b)}{(any c)}"},
-				{"T", "(any T)"},
-				{"T{char, Q}", "(any T){M/char}{(any Q)}"},
-				{"map{T{int}, Q}", "M/map{(any T){M/int}}{(any Q)}"},
-			}};
-
-			for (auto p : parses) {
-				reset_generics();
-				auto repr = parse_type_expr(p.first, generics, module_id)->repr().str();
-				if (repr != p.second) {
-					log(log_error, c_type("%s") " parsed to " c_type("%s")
-							" - should have been " c_type("%s"),
-							p.first.c_str(),
-							repr.c_str(),
-							p.second.c_str());
-					dbg();
-					return false;
-				}
-			}
-			return true;
-		}
-	},
-	{
-		"test_unification",
-		[] () -> bool {
-			type_struct({type_variable(INTERNAL_LOC()), type_id(make_iid("float"))}, {} /* name_index */);
-			identifier::set generics = {make_iid("Container"), make_iid("T")};
-			auto unifies = std::vector<types::type_t::pair>{{
-				types::type_t::pair{
-					parse_type_expr("void", generics, make_iid("foobar")),
-					   	type_id(make_iid("foobar/void"))},
-				make_type_pair("any", "float", generics),
-				make_type_pair("void", "void", generics),
-				make_type_pair("any a", "int", generics),
-				make_type_pair("any", "map{int, int}", generics),
-				make_type_pair("any a", "map{int, str}", generics),
-				make_type_pair("{int, char}", "{int, char}", generics),
-				make_type_pair("map{any a, any b}", "map{int, str}", generics),
-				make_type_pair("map{any a, any}", "map{int, str}", generics),
-				make_type_pair("map{any, any b}", "map{int, str}", generics),
-				make_type_pair("map{any, any}", "map{int, str}", generics),
-				make_type_pair("Container{any, any}", "map{int, str}", generics),
-				make_type_pair("map{any, T}", "map{int, str}", generics),
-				make_type_pair("Container{int, T}", "map{int, str}", generics),
-				make_type_pair("Container{T, T}", "map{int, int}", generics),
-				make_type_pair("Container{T}?", "[int]", generics),
-			}};
-
-			auto fails = std::vector<types::type_t::pair>{{
-				make_type_pair("int", "void", {}),
-				make_type_pair("int", "void", generics),
-				make_type_pair("{T, T}", "{void, int}", generics),
-				make_type_pair("int", "map{int, int}", generics),
-				make_type_pair("map{any a, any a}", "map{int, str}", generics),
-				make_type_pair("Container{T}", "[int]", generics),
-			}};
-
-			status_t status;
-			for (auto &pair : unifies) {
-				test_assert(unify(pair.first, pair.second).result);
-				assert(!!status);
-			}
-
-			for (auto &pair : fails) {
-				auto unification = unify(pair.first, pair.second);
-				assert(!!status);
-				if (unification.result) {
-					log(log_error, "should have failed unifying %s and %s [%s]",
-							pair.first->str().c_str(),
-							pair.second->str().c_str(),
-							unification.str().c_str());
-				}
-
-				test_assert(!unification.result);
-			}
-
-			return true;
-		}
-	},
-
 	{
 		"test_code_gen_module_exists",
 		[] () -> bool {

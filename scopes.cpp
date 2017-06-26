@@ -9,17 +9,9 @@
 #include "unification.h"
 
 const char *GLOBAL_ID = "_";
-const token_kind SCOPE_TK = tk_divide_by;
-const char *SCOPE_SEP = "/";
+const token_kind_t SCOPE_TK = tk_dot;
+const char *SCOPE_SEP = ".";
 const char SCOPE_SEP_CHAR = '/';
-
-types::type_t::ref module_scope_impl_t::get_inbound_context() {
-	return inbound_context;
-}
-
-types::type_t::ref module_scope_impl_t::get_outbound_context() {
-	return outbound_context;
-}
 
 bound_var_t::ref get_bound_variable_from_scope(
 		status_t &status,
@@ -417,33 +409,12 @@ void local_scope_t::dump(std::ostream &os) const {
 	get_parent_scope()->dump(os);
 }
 
-generic_substitution_scope_t::generic_substitution_scope_t(
-        atom name,
-        scope_t::ref parent_scope,
-        types::type_t::ref callee_signature) :
-    scope_impl_t(name, parent_scope), callee_signature(callee_signature)
-{
-}
-
-void generic_substitution_scope_t::dump(std::ostream &os) const {
-	os << std::endl << "GENERIC SUBSTITUTION SCOPE: " << scope_name << std::endl;
-	os << "For Callee Signature: " << callee_signature->str() << std::endl;
-	dump_bindings(os, bound_vars, {});
-	dump_type_map(os, typename_env, "GENERIC SUBSTITUTION TYPENAME ENV");
-	dump_type_map(os, type_variable_bindings, "GENERIC SUBSTITUTION TYPE VARIABLE BINDINGS");
-	get_parent_scope()->dump(os);
-}
-
 module_scope_impl_t::module_scope_impl_t(
 		atom name,
 	   	program_scope_t::ref parent_scope,
-		llvm::Module *llvm_module,
-		types::type_t::ref inbound_context,
-		types::type_t::ref outbound_context) :
+		llvm::Module *llvm_module) :
 	scope_impl_t<module_scope_t>(name, parent_scope),
-   	llvm_module(llvm_module),
-	inbound_context(inbound_context),
-	outbound_context(outbound_context)
+   	llvm_module(llvm_module)
 {
 }
 
@@ -455,15 +426,6 @@ void module_scope_impl_t::mark_checked(
 		status_t &status,
 	   	llvm::IRBuilder<> &builder,
 	   	const ptr<const ast::item_t> &node) {
-	if (auto function_defn = dyncast<const ast::function_defn_t>(node)) {
-		if (is_function_defn_generic(status, builder, shared_from_this(),
-					*function_defn)) {
-			/* for now let's never mark generic functions as checked, until we
-			 * have a mechanism to join the type to the checked-mark.  */
-			return;
-		}
-	}
-
 	assert(!has_checked(node));
 	visited.insert(node);
 }
@@ -607,13 +569,7 @@ ptr<module_scope_t> program_scope_t::new_module_scope(
 	 * may call this function */
 	auto inbound_context = ::type_module(type_id(make_iid(name)));
 
-	/* outbound context says that callsites within this module by default are
-	 * aiming for either program context, or this module's context */
-	auto outbound_context = type_sum({get_program_scope()->get_inbound_context(),
-			inbound_context});
-
-	auto module_scope = module_scope_impl_t::create(name, get_program_scope(), llvm_module,
-			inbound_context, outbound_context);
+	auto module_scope = module_scope_impl_t::create(name, get_program_scope(), llvm_module);
 
 	modules.insert({name, module_scope});
 	return module_scope;
@@ -655,57 +611,15 @@ std::string program_scope_t::dump_llvm_modules() {
 module_scope_t::ref module_scope_impl_t::create(
 		atom name,
 		program_scope_t::ref parent_scope,
-		llvm::Module *llvm_module,
-		types::type_t::ref inbound_context,
-		types::type_t::ref outbound_context)
+		llvm::Module *llvm_module)
 {
-	return make_ptr<module_scope_impl_t>(name, parent_scope, llvm_module, inbound_context, outbound_context);
+	return make_ptr<module_scope_impl_t>(name, parent_scope, llvm_module);
 }
 
 llvm::Module *module_scope_impl_t::get_llvm_module() {
 	return llvm_module;
 }
 
-llvm::Module *generic_substitution_scope_t::get_llvm_module() {
-	return get_parent_scope()->get_llvm_module();
-}
-
 program_scope_t::ref program_scope_t::create(atom name, llvm::Module *llvm_module) {
-	auto inbound_context = ::type_module(type_id(make_iid(GLOBAL_ID)));
-	auto outbound_context = inbound_context;
-
-	return make_ptr<program_scope_t>(name, llvm_module, inbound_context, outbound_context);
-}
-
-generic_substitution_scope_t::ref generic_substitution_scope_t::create(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		const ptr<const ast::item_t> &fn_decl,
-		scope_t::ref parent_scope,
-		unification_t unification,
-		types::type_t::ref callee_type)
-{
-	/* instantiate a new scope */
-	auto subst_scope = make_ptr<generic_substitution_scope_t>(
-			"generic substitution", parent_scope, callee_type);
-
-	/* iterate over the bindings found during unifications and make
-	 * substitutions in the type environment */
-	for (auto &pair : unification.bindings) {
-		if (pair.first.str().find("_") != 0) {
-			subst_scope->put_type_variable_binding(status, pair.first, pair.second);
-			if (!status) {
-				break;
-			}
-		} else {
-			debug_above(7, log(log_info, "skipping adding %s to generic substitution scope",
-						pair.first.c_str()));
-		}
-	}
-
-	if (!!status) {
-		return subst_scope;
-	} else {
-		return nullptr;
-	}
+	return make_ptr<program_scope_t>(name, llvm_module);
 }

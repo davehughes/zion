@@ -49,19 +49,6 @@ void scope_setup_type_def(
 			unchecked_type_t::create(fqn_name, obj.shared_from_this(), module_scope));
 }
 
-void scope_setup_tag(
-		status_t &status,
-	   	const ast::tag_t &obj,
-	   	ptr<module_scope_t> module_scope)
-{
-	assert(obj.token.text.find(SCOPE_SEP) == std::string::npos);
-	assert(obj.token.text.size() != 0);
-	atom fqn_name = module_scope->make_fqn(obj.token.text);
-	module_scope->put_unchecked_type(
-			status,
-			unchecked_type_t::create(fqn_name, obj.shared_from_this(), module_scope));
-}
-
 status_t scope_setup_module(compiler_t &compiler, const ast::module_t &obj) {
 	status_t status;
 	auto module_name = obj.decl->get_canonical_name();
@@ -81,10 +68,6 @@ status_t scope_setup_module(compiler_t &compiler, const ast::module_t &obj) {
    	compiler.set_module_scope(obj.module_key, module_scope);
 
 	/* add any unchecked tags, types, links, or variables to this module */
-	for (auto &tag : obj.tags) {
-		scope_setup_tag(status, *tag, module_scope);
-	}
-
 	for (auto &type_def : obj.type_defs) {
 		scope_setup_type_def(status, *type_def, module_scope);
 	}
