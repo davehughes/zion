@@ -51,19 +51,6 @@ ptr<const var_decl_t> var_decl_t::parse(parse_state_t &ps) {
 	return var_decl;
 }
 
-ptr<const param_decl_t> param_decl_t::parse(parse_state_t &ps) {
-	expect_token(tk_identifier);
-
-	auto param_decl = create<ast::param_decl_t>(ps.token);
-	eat_token();
-
-	expect_token(tk_identifier);
-	param_decl->type_name = ps.token;
-	ps.advance();
-
-	return param_decl;
-}
-
 ptr<const return_statement_t> return_statement_t::parse(parse_state_t &ps) {
 	auto return_statement = create<ast::return_statement_t>(ps.token);
 	chomp_token(tk_return);
@@ -448,11 +435,24 @@ ptr<const function_decl_t> function_decl_t::parse(parse_state_t &ps) {
 	chomp_token(tk_identifier);
 	chomp_token(tk_lparen);
 
-	function_decl->param_list_decl = param_list_decl_t::parse(ps);
+
+	while (!!ps.status && ps.token.tk != tk_rparen) {
+		auto dimension = dimension_t::parse(ps);
+		if (!ps.status) {
+			function_decl->params.push_back(dimension);
+			if (ps.token.tk == tk_comma) {
+				eat_token();
+				continue;
+			} else {
+				expect_token(tk_rparen);
+				break;
+			}
+		}
+	}
+
 	if (!!ps.status) {
-		chomp_token(tk_rparen);
 		expect_token(tk_identifier);
-		function_decl->return_type_name = ps.token;
+		function_decl->return_type_name = make_iid_impl({ps.token.text}, ps.token.location);
 
 		return function_decl;
 	}
@@ -575,48 +575,22 @@ type_decl_t::ref type_decl_t::parse(parse_state_t &ps, token_t name_token) {
 	}
 }
 
-ptr<type_def_t> type_def_t::parse(parse_state_t &ps) {
+ptr<const user_defined_type_t> user_defined_type_t::parse(parse_state_t &ps) {
 	chomp_token(tk_type);
+	ps.advance();
 	expect_token(tk_identifier);
-	auto type_name_token = ps.token;
+	auto type_name = make_iid_impl({ps.token.text}, ps.token.location);
 	ps.advance();
 
-	auto type_def = create<ast::type_def_t>(type_name_token);
-	type_def->type_decl = type_decl_t::parse(ps, type_name_token);
-	if (!!ps.status) {
-		type_def->type_algebra = ast::type_algebra_t::parse(ps, type_def->type_decl);
-		if (!!ps.status) {
-			return type_def;
-		}
-	}
-
-	assert(!ps.status);
-	return nullptr;
-}
-
-ptr<tag_t> tag_t::parse(parse_state_t &ps) {
-	chomp_token(tk_tag);
-	expect_token(tk_identifier);
-	auto tag = create<ast::tag_t>(ps.token);
-	ps.advance();
-	return tag;
-}
-
-type_algebra_t::ref type_algebra_t::parse(
-		parse_state_t &ps,
-		ast::type_decl_t::ref type_decl)
-{
 	switch (ps.token.tk) {
-	case tk_is:
-		return type_sum_t::parse(ps, type_decl, type_decl->type_variables);
-	case tk_has:
-		return type_product_t::parse(ps, type_decl, type_decl->type_variables);
-	case tk_matches:
-		return type_alias_t::parse(ps, type_decl, type_decl->type_variables);
+	case tk_struct:
+		return struct_t::parse(ps, type_name);
+	case tk_polymorph:
+		return polymorph_t::parse(ps, type_name);
 	default:
 		ps.error(
 				"type descriptions must begin with "
-			   	c_id("is") ", " c_id("has") ", or " c_id("matches") ". (Found %s)",
+			   	c_id("struct") ", " c_id("polymorph") ". (Found %s)",
 				ps.token.str().c_str());
 		return nullptr;
 	}
@@ -758,19 +732,11 @@ ptr<module_t> module_t::parse(parse_state_t &ps, bool global) {
 				} else {
 					assert(!ps.status);
 				}
-			} else if (ps.token.tk == tk_tag) {
-				/* tags */
-				auto tag = tag_t::parse(ps);
-				if (tag) {
-					module->tags.push_back(std::move(tag));
-				} else {
-					assert(!ps.status);
-				}
 			} else if (ps.token.tk == tk_type) {
 				/* type definitions */
-				auto type_def = type_def_t::parse(ps);
-				if (type_def != nullptr) {
-					module->type_defs.push_back(std::move(type_def));
+				auto user_defined_type = user_defined_type_t::parse(ps);
+				if (!!ps.status) {
+					module->user_defined_types.push_back(user_defined_type);
 				} else {
 					/* it's ok, this may have just been a type macro */
 				}
