@@ -224,6 +224,7 @@ namespace ast {
 	struct user_defined_type_t : public item_t {
 		virtual ~user_defined_type_t() throw() {}
 
+		static ptr<const user_defined_type_t> parse(parse_state_t &ps);
 		virtual void register_type(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -256,18 +257,6 @@ namespace ast {
 				scope_t::ref scope) const;
 
 		std::vector<dimension_t::ref> dimensions;
-	};
-
-	struct type_def_t : public statement_t {
-		typedef ptr<const type_def_t> ref;
-
-		static ptr<const type_def_t> parse(parse_state_t &ps);
-		virtual void instantiate_type(
-				status_t &status,
-				llvm::IRBuilder<> &builder,
-				scope_t::ref scope) const;
-
-		user_defined_type_t::ref user_defined_type;
 	};
 
 	struct var_decl_t : public statement_t {
@@ -484,7 +473,7 @@ namespace ast {
 		mutable atom module_key;
 
 		ptr<const module_decl_t> decl;
-		std::vector<ptr<const type_def_t>> type_defs;
+		std::vector<ptr<const user_defined_type_t>> user_defined_types;
 		std::vector<ptr<const function_defn_t>> functions;
 		std::vector<ptr<const link_module_statement_t>> linked_modules;
 		std::vector<ptr<const link_function_statement_t>> linked_functions;

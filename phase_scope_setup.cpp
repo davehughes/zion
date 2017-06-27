@@ -38,15 +38,15 @@ unchecked_var_t::ref scope_setup_function_defn(
 
 void scope_setup_type_def(
 		status_t &status,
-	   	const ast::type_def_t &obj,
+	   	const ast::user_defined_type_t &obj,
 	   	ptr<module_scope_t> module_scope)
 {
 	assert(obj.token.text.find(SCOPE_SEP) == std::string::npos);
 	assert(obj.token.text.size() != 0);
-	atom fqn_name = module_scope->make_fqn(obj.token.text);
+	identifier::ref id = make_iid_impl({obj.token.text}, obj.token.location);
 	module_scope->put_unchecked_type(
 			status,
-			unchecked_type_t::create(fqn_name, obj.shared_from_this(), module_scope));
+			unchecked_type_t::create(id, obj.shared_from_this(), module_scope));
 }
 
 status_t scope_setup_module(compiler_t &compiler, const ast::module_t &obj) {
@@ -68,8 +68,8 @@ status_t scope_setup_module(compiler_t &compiler, const ast::module_t &obj) {
    	compiler.set_module_scope(obj.module_key, module_scope);
 
 	/* add any unchecked tags, types, links, or variables to this module */
-	for (auto &type_def : obj.type_defs) {
-		scope_setup_type_def(status, *type_def, module_scope);
+	for (auto &user_defined_type : obj.user_defined_types) {
+		scope_setup_type_def(status, *user_defined_type, module_scope);
 	}
 
 	for (auto &function : obj.functions) {

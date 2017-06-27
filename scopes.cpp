@@ -434,7 +434,7 @@ void module_scope_impl_t::put_unchecked_type(
 		status_t &status,
 		unchecked_type_t::ref unchecked_type)
 {
-	assert(unchecked_type->name.str().find(SCOPE_SEP) != std::string::npos);
+	assert(unchecked_type->id->get_name().str().find(SCOPE_SEP) != std::string::npos);
 	debug_above(6, log(log_info, "registering an unchecked type %s",
 				unchecked_type->str().c_str()));
 

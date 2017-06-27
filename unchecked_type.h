@@ -13,11 +13,11 @@ struct unchecked_type_t {
 	unchecked_type_t() = delete;
 	unchecked_type_t(const unchecked_type_t &) = delete;
 	unchecked_type_t(
-			atom name,
+			identifier::ref id,
 			ptr<const ast::item_t> node,
 			ptr<scope_t> const module_scope);
 
-	atom const name;
+	identifier::ref id;
 	ptr<const ast::item_t> const node;
 	ptr<scope_t> const module_scope;
 
@@ -28,7 +28,7 @@ struct unchecked_type_t {
 	typedef std::map<atom, ref> map;
 
 	static ref create(
-			atom name,
+			identifier::ref id,
 			ptr<const ast::item_t> node,
 			ptr<scope_t> const module_scope);
 };
