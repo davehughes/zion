@@ -11,8 +11,6 @@ namespace types {
 	struct type_t;
 }
 
-typedef std::map<atom, ptr<const types::type_t>> type_macros_t;
-
 struct parse_state_t {
 	typedef log_level_t parse_error_level_t;
 	parse_error_level_t pel_error = log_error;
@@ -22,7 +20,6 @@ struct parse_state_t {
 			status_t &status,
 			std::string filename,
 			lexer_t &lexer,
-			type_macros_t type_macros,
 			std::vector<token_t> *comments=nullptr);
 
 	bool advance();

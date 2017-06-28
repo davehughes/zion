@@ -16,7 +16,7 @@ namespace ast {
 		}
 	}
 
-	module_t::module_t(const atom filename, bool global) : global(global), filename(filename) {
+	module_t::module_t(const atom filename) : filename(filename) {
 	}
 
 	std::string module_t::get_canonical_name() const {
