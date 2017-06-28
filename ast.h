@@ -46,7 +46,7 @@ namespace ast {
 
 		virtual ~statement_t() {}
 		static ptr<const statement_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_statement(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -92,7 +92,7 @@ namespace ast {
 	struct continue_flow_t : public statement_t {
 		typedef ptr<const continue_flow_t> ref;
 
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -104,7 +104,7 @@ namespace ast {
 	struct break_flow_t : public statement_t {
 		typedef ptr<const break_flow_t> ref;
 
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -116,7 +116,7 @@ namespace ast {
 	struct pass_flow_t : public statement_t {
 		typedef ptr<const pass_flow_t> ref;
 
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -129,13 +129,11 @@ namespace ast {
 		typedef ptr<const typeid_expr_t> ref;
 
 		typeid_expr_t(ptr<expression_t> expr);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				life_t::ref life) const;
 		static ptr<const typeid_expr_t> parse(parse_state_t &ps);
 
 		ptr<const expression_t> expr;
@@ -145,13 +143,11 @@ namespace ast {
 		typedef ptr<const typeid_expr_t> ref;
 
 		sizeof_expr_t(types::signature type_name);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				life_t::ref life) const;
 		static ptr<const sizeof_expr_t> parse(parse_state_t &ps);
 
 		types::signature type_name;
@@ -161,13 +157,18 @@ namespace ast {
 		typedef ptr<const callsite_expr_t> ref;
 
 		static ref parse(parse_state_t &ps, ptr<const reference_expr_t> ref_expr);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
 				life_t::ref life,
 				local_scope_t::ref *new_scope,
 				bool *returns) const;
+		virtual bound_var_t::ref resolve_expression(
+				status_t &status,
+				llvm::IRBuilder<> &builder,
+				scope_t::ref block_scope,
+				life_t::ref life) const;
 
 		ptr<const reference_expr_t> function_expr;
 		ptr<const param_list_t> params;
@@ -179,7 +180,7 @@ namespace ast {
 		static ptr<const return_statement_t> parse(parse_state_t &ps);
 		ptr<const reference_expr_t> expr;
 
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -199,13 +200,11 @@ namespace ast {
 	struct cast_expr_t : public expression_t {
 		typedef ptr<const cast_expr_t> ref;
 
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
-				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				scope_t::ref scope,
+				life_t::ref life) const;
 
 		ptr<const expression_t> lhs;
 		token_t type_cast;
@@ -235,7 +234,7 @@ namespace ast {
 		typedef ptr<const polymorph_t> ref;
 
 		virtual ~polymorph_t() throw() {}
-		static ref parse(parse_state_t &ps);
+		static ref parse(parse_state_t &ps, token_t type_name);
 		virtual void register_type(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -250,7 +249,7 @@ namespace ast {
 		typedef ptr<const struct_t> ref;
 
 		virtual ~struct_t() throw() {}
-		static ref parse(parse_state_t &ps);
+		static ref parse(parse_state_t &ps, token_t type_name);
 		virtual void register_type(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -264,7 +263,7 @@ namespace ast {
 
 		static ptr<const var_decl_t> parse(parse_state_t &ps);
 		static ptr<const var_decl_t> parse_param(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -288,7 +287,7 @@ namespace ast {
 		typedef ptr<const assignment_t> ref;
 
 		static ptr<const statement_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -305,7 +304,7 @@ namespace ast {
 
 
 		static ptr<const block_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -325,11 +324,11 @@ namespace ast {
 		identifier::ref return_type_name;
 	};
 
-	struct function_defn_t : public expression_t {
+	struct function_defn_t : public statement_t {
 		typedef ptr<const function_defn_t> ref;
 
 		static ptr<const function_defn_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -353,13 +352,11 @@ namespace ast {
 		typedef ptr<const if_block_t> ref;
 
 		static ptr<const if_block_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				life_t::ref life) const;
 
 		ptr<const reference_expr_t> condition;
 		ptr<const block_t> block;
@@ -371,7 +368,7 @@ namespace ast {
 
 
 		static ptr<const loop_block_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -407,7 +404,7 @@ namespace ast {
 		typedef ptr<const match_block_t> ref;
 
 		static ptr<const match_block_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -433,7 +430,7 @@ namespace ast {
 	struct link_module_statement_t : public statement_t {
 		typedef ptr<const link_module_statement_t> ref;
 
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -448,7 +445,7 @@ namespace ast {
 		typedef ptr<const link_function_statement_t> ref;
 
 
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
@@ -464,11 +461,10 @@ namespace ast {
 		typedef ptr<const module_t> ref;
 
 
-		module_t(const atom filename, bool global=false);
-		static ptr<const module_t> parse(parse_state_t &ps, bool global=false);
+		module_t(const atom filename);
+		static ptr<const module_t> parse(parse_state_t &ps);
 		std::string get_canonical_name() const;
 
-		bool global;
 		atom filename;
 		mutable atom module_key;
 
@@ -490,13 +486,11 @@ namespace ast {
 	struct ternary_expr_t : public expression_t {
 		typedef ptr<const ternary_expr_t> ref;
 
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				life_t::ref life) const;
 
 		ptr<const reference_expr_t> condition;
 		ptr<const ast::expression_t> when_true, when_false;
@@ -506,33 +500,22 @@ namespace ast {
 		typedef ptr<const reference_expr_t> ref;
 
 		static ptr<const reference_expr_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
-		virtual bound_var_t::ref resolve_overrides(
-				status_t &status,
-				llvm::IRBuilder<> &builder,
-				scope_t::ref scope,
-				life_t::ref,
-				const ptr<const ast::item_t> &obj,
-				const bound_type_t::refs &args) const;
+				life_t::ref life) const;
 	};
 
 	struct literal_expr_t : public expression_t {
 		typedef ptr<const literal_expr_t> ref;
 
 		static ptr<const expression_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				life_t::ref life) const;
 	};
 
 	struct array_literal_expr_t : public expression_t {
@@ -552,13 +535,11 @@ namespace ast {
 		typedef ptr<const array_index_expr_t> ref;
 
 		static ptr<const expression_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_instantiation(
+		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				life_t::ref life) const;
 
 		ptr<const reference_expr_t> lhs;
 		ptr<const reference_expr_t> index;

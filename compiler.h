@@ -58,9 +58,9 @@ struct compiler_t {
 	void build_type_check_and_code_gen(status_t &status);
 
 	/* parse a single module */
-	ptr<const ast::module_t> build_parse(status_t &status, location_t location, std::string module_name, bool global, type_macros_t &global_type_macros);
+	ptr<const ast::module_t> build_parse(status_t &status, location_t location, std::string module_name);
 
-	void build_parse_linked(status_t &status, ptr<const ast::module_t> module, type_macros_t &global_type_macros);
+	void build_parse_linked(status_t &status, ptr<const ast::module_t> module);
 	std::unordered_set<std::string> compile_modules(status_t &status);
 	int emit_built_program(status_t &status, std::string bitcode_filename);
 	int run_program(std::string bitcode_filename);
@@ -70,7 +70,6 @@ struct compiler_t {
 	std::string get_executable_filename() const;
 
 	ptr<const ast::module_t> main_module;
-	type_macros_t base_type_macros;
 
 	/* member variables */
 private:

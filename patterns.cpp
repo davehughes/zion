@@ -7,7 +7,7 @@
 #include "llvm_types.h"
 #include <iostream>
 
-bound_var_t::ref ast::match_block_t::resolve_instantiation(
+bound_var_t::ref ast::match_block_t::resolve_statement(
 		status_t &status,
 	   	llvm::IRBuilder<> &builder,
 	   	scope_t::ref block_scope,
@@ -20,7 +20,7 @@ bound_var_t::ref ast::match_block_t::resolve_instantiation(
 	assert(life->life_form == lf_statement);
 
 	local_scope_t::ref when_scope;
-	auto pattern_value = value->resolve_instantiation(status, builder,
+	auto pattern_value = value->resolve_statement(status, builder,
 			block_scope, life, &when_scope, returns);
 	scope_t::ref current_scope = (when_scope != nullptr) ? when_scope : block_scope;
 	runnable_scope_t::ref runnable_scope = dyncast<runnable_scope_t>(current_scope);
@@ -181,7 +181,7 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 							returns, ++next_iter, end_iter,
 							else_block);
 				} else if (else_block != nullptr) {
-					return else_block->resolve_instantiation(status, builder,
+					return else_block->resolve_statement(status, builder,
 							scope, life, nullptr, returns);
 				}
 
@@ -232,7 +232,7 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 										&else_block_returns, ++next_iter, end_iter,
 										else_block);
 							} else {
-								else_block->resolve_instantiation(status, builder,
+								else_block->resolve_statement(status, builder,
 										scope, life, nullptr, &else_block_returns);
 							}
 
@@ -267,7 +267,7 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 						/* let's generate code for the "then" block */
 						builder.SetInsertPoint(then_bb);
 						bool if_block_returns = false;
-						block->resolve_instantiation(status, builder,
+						block->resolve_statement(status, builder,
 								if_scope ? if_scope : scope, life, nullptr,
 								&if_block_returns);
 						if (!!status) {

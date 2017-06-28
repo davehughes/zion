@@ -438,21 +438,21 @@ void module_scope_impl_t::put_unchecked_type(
 	debug_above(6, log(log_info, "registering an unchecked type %s",
 				unchecked_type->str().c_str()));
 
-	auto unchecked_type_iter = unchecked_types.find(unchecked_type->name);
+	auto unchecked_type_iter = unchecked_types.find(unchecked_type->id->get_name());
 
 	if (unchecked_type_iter == unchecked_types.end()) {
-		unchecked_types.insert({unchecked_type->name, unchecked_type});
+		unchecked_types.insert({unchecked_type->id->get_name(), unchecked_type});
 
 		/* also keep an ordered list of the unchecked types */
 		unchecked_types_ordered.push_back(unchecked_type);
 	} else {
 		/* this unchecked type already exists */
-		user_error(status, *unchecked_type->node, "type " c_type("%s") " already exists",
-				unchecked_type->name.c_str());
+		user_error(status, *unchecked_type->node, "type %s already exists",
+				unchecked_type->id->str().c_str());
 
 		user_error(status, *unchecked_type_iter->second->node,
-				"see type " c_type("%s") " declaration",
-				unchecked_type_iter->second->name.c_str());
+				"see type %s declaration",
+				unchecked_type_iter->second->id->str().c_str());
 	}
 }
 

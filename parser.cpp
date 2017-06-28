@@ -264,8 +264,6 @@ ptr<const expression_t> literal_expr_t::parse(parse_state_t &ps) {
 		}
 	case tk_lsquare:
 		return array_literal_expr_t::parse(ps);
-	case tk_fn:
-		return function_defn_t::parse(ps);
 	case tk_lcurly:
 		ps.error("unexpected indent");
 		return nullptr;
@@ -579,7 +577,7 @@ ptr<const user_defined_type_t> user_defined_type_t::parse(parse_state_t &ps) {
 	chomp_token(tk_type);
 	ps.advance();
 	expect_token(tk_identifier);
-	auto type_name = make_iid_impl({ps.token.text}, ps.token.location);
+	auto type_name = ps.token;
 	ps.advance();
 
 	switch (ps.token.tk) {
@@ -596,101 +594,65 @@ ptr<const user_defined_type_t> user_defined_type_t::parse(parse_state_t &ps) {
 	}
 }
 
-type_sum_t::ref type_sum_t::parse(
-		parse_state_t &ps,
-		ast::type_decl_t::ref type_decl,
-		identifier::refs type_variables_list)
-{
-	identifier::set type_variables = to_set(type_variables_list);
-	auto is_token = ps.token;
-	chomp_token(tk_is);
-	bool expect_outdent = false;
-	if (ps.token.tk == tk_lcurly) {
-		/* take note of whether the user has indented or not */
-		expect_outdent = true;
-		ps.advance();
-	}
+polymorph_t::ref polymorph_t::parse(parse_state_t &ps, token_t type_name) {
+	chomp_token(tk_polymorph);
+	chomp_token(tk_lcurly);
 
-	auto type = _parse_type(ps, make_code_id(type_decl->token),
-			type_variables_list, type_variables);
-
-	if (!!ps.status) {
-		if (expect_outdent) {
-			if (ps.token.tk == tk_lparen) {
-				ps.error("subtypes of a supertype must be separated by the '" c_type("or") "' keyword");
-				return nullptr;
-			} else {
-				chomp_token(tk_rcurly);
-			}
+	auto polymorph = ast::create<polymorph_t>(type_name);
+	while (ps.token.tk == tk_identifier) {
+		auto subtype = make_iid_impl({ps.token.text}, ps.token.location);
+		if (polymorph->subtypes.find(subtype) != polymorph->subtypes.end()) {
+			ps.error("subtype " c_id("%s") " already exists", ps.token.text.c_str()); 
+			ps.advance();
+		} else {
+			polymorph->subtypes.insert(subtype);
+			ps.advance();
 		}
-
-		return create<type_sum_t>(type_decl->token, type);
-	} else {
-		return nullptr;
 	}
-}
 
-type_product_t::ref type_product_t::parse(
-		parse_state_t &ps,
-		ast::type_decl_t::ref type_decl,
-	   	identifier::refs type_variables)
-{
-	identifier::set generics = to_identifier_set(type_variables);
-	expect_token(tk_has);
-	auto type = _parse_single_type(ps, {}, {}, generics);
-	return create<type_product_t>(type_decl->token, type, generics);
-}
-
-type_alias_t::ref type_alias_t::parse(
-		parse_state_t &ps,
-		ast::type_decl_t::ref type_decl,
-	   	identifier::refs type_variables)
-{
-	chomp_token(tk_matches);
-
-	identifier::set generics = to_identifier_set(type_variables);
-	types::type_t::ref type = parse_maybe_type(ps, make_code_id(type_decl->token), type_variables, generics);
 	if (!!ps.status) {
-		auto type_alias = ast::create<ast::type_alias_t>(type_decl->token);
-		type_alias->type = type;
-		type_alias->type_variables = generics;
-		return type_alias;
+		chomp_token(tk_rcurly);
+		return polymorph;
 	}
 
 	assert(!ps.status);
 	return nullptr;
 }
 
-dimension_t::ref dimension_t::parse(parse_state_t &ps, identifier::set generics) {
-	token_t primary_token;
-	atom name;
-	if (ps.token.tk == tk_var) {
-		ps.advance();
-		expect_token(tk_identifier);
-		primary_token = ps.token;
-		name = primary_token.text;
-		ps.advance();
-	} else {
-		ps.error("not sure what's going on here");
-		wat();
-		expect_token(tk_identifier);
-		primary_token = ps.token;
+struct_t::ref struct_t::parse(parse_state_t &ps, token_t type_name) {
+	chomp_token(tk_struct);
+	chomp_token(tk_lcurly);
+	auto struct_ = ast::create<struct_t>(type_name);
+	while (ps.token.tk != tk_rcurly) {
+		auto dimension = dimension_t::parse(ps);
+		if (!!ps.status) {
+			struct_->dimensions.push_back(dimension);
+		} else {
+			break;
+		}
 	}
 
-	types::type_t::ref type = parse_maybe_type(ps, {}, {}, generics);
 	if (!!ps.status) {
-		return ast::create<ast::dimension_t>(primary_token, name, type);
+		chomp_token(tk_rcurly);
+		return struct_;
 	}
+
 	assert(!ps.status);
 	return nullptr;
 }
 
-ptr<module_t> module_t::parse(parse_state_t &ps, bool global) {
-	debug_above(6, log("about to parse %s with type_macros: [%s]",
-				ps.filename.str().c_str(),
-				join_with(ps.type_macros, ", ", [] (type_macros_t::value_type v) -> std::string {
-					return v.first.str() + ": " + v.second->str();
-				}).c_str()));
+dimension_t::ref dimension_t::parse(parse_state_t &ps) {
+	expect_token(tk_identifier);
+	token_t var_name = ps.token;
+	ps.advance();
+	expect_token(tk_identifier);
+	auto dimension = ast::create<dimension_t>(var_name);
+	dimension->type_name = make_iid_impl({ps.token.text}, ps.token.location);
+	return dimension;
+}
+
+ptr<const module_t> module_t::parse(parse_state_t &ps) {
+	debug_above(6, log("about to parse %s", ps.filename.str().c_str()));
 
 	auto module_decl = module_decl_t::parse(ps);
 
@@ -698,7 +660,7 @@ ptr<module_t> module_t::parse(parse_state_t &ps, bool global) {
 		ps.module_id = make_iid(module_decl->get_canonical_name());
 		assert(ps.module_id != nullptr);
 
-		auto module = create<ast::module_t>(ps.token, ps.filename, global);
+		auto module = create<ast::module_t>(ps.token, ps.filename);
 		module->decl = module_decl;
 
 		// Get links
@@ -711,34 +673,19 @@ ptr<module_t> module_t::parse(parse_state_t &ps, bool global) {
 			}
 		}
 		
-		/* TODO: update the parser to contain the type maps from the link_names */
-		add_type_macros_to_parser(ps, module->linked_names);
-
 		// Get vars, functions or type defs
 		while (!!ps.status) {
-			if (ps.token.tk == tk_var) {
-				ps.advance();
-				auto var = var_decl_t::parse(ps);
-				if (var) {
-					module->var_decls.push_back(var);
-				} else {
-					assert(!ps.status);
-				}
-			} else if (ps.token.tk == tk_lsquare || ps.token.tk == tk_def) {
+			if (ps.token.tk == tk_fn) {
 				/* function definitions */
 				auto function = function_defn_t::parse(ps);
-				if (function) {
-					module->functions.push_back(std::move(function));
-				} else {
-					assert(!ps.status);
+				if (!!ps.status) {
+					module->functions.push_back(function);
 				}
 			} else if (ps.token.tk == tk_type) {
 				/* type definitions */
 				auto user_defined_type = user_defined_type_t::parse(ps);
 				if (!!ps.status) {
 					module->user_defined_types.push_back(user_defined_type);
-				} else {
-					/* it's ok, this may have just been a type macro */
 				}
 			} else {
 				break;
