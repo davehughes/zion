@@ -46,12 +46,6 @@ namespace ast {
 	item_t::~item_t() throw() {
 	}
 
-	typeid_expr_t::typeid_expr_t(ptr<expression_t> expr) : expr(expr) {
-	}
-
-	sizeof_expr_t::sizeof_expr_t(types::signature type_name) : type_name(type_name) {
-	}
-
 	type_decl_t::type_decl_t() {
 	}
 

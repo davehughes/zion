@@ -356,14 +356,6 @@ bound_var_t::ref type_check_bound_var_decl(
 	return nullptr;
 }
 
-atom::many get_param_list_decl_variable_names(ast::param_list_decl_t::ref obj) {
-	atom::many names;
-	for (auto param : obj->params) {
-		names.push_back({param->token.text});
-	}
-	return names;
-}
-
 bound_type_t::named_pairs zip_named_pairs(
 		atom::many names,
 		bound_type_t::refs args)

@@ -81,7 +81,7 @@ namespace ast {
 
 		virtual ~expression_t() {}
 		static ptr<const expression_t> parse(parse_state_t &ps);
-		virtual atom get_type() const = 0;
+		// virtual identifier::ref get_type() const = 0;
 		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -128,7 +128,6 @@ namespace ast {
 	struct typeid_expr_t : public expression_t {
 		typedef ptr<const typeid_expr_t> ref;
 
-		typeid_expr_t(ptr<expression_t> expr);
 		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -136,13 +135,12 @@ namespace ast {
 				life_t::ref life) const;
 		static ptr<const typeid_expr_t> parse(parse_state_t &ps);
 
-		ptr<const expression_t> expr;
+		ptr<const reference_expr_t> expr;
 	};
 
 	struct sizeof_expr_t : public expression_t {
 		typedef ptr<const typeid_expr_t> ref;
 
-		sizeof_expr_t(types::signature type_name);
 		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -150,7 +148,7 @@ namespace ast {
 				life_t::ref life) const;
 		static ptr<const sizeof_expr_t> parse(parse_state_t &ps);
 
-		types::signature type_name;
+		identifier::ref type_name;
 	};
 
 	struct callsite_expr_t : public expression_t, public statement_t {
@@ -505,6 +503,13 @@ namespace ast {
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
 				life_t::ref life) const;
+		virtual bound_var_t::ref resolve_overrides(
+				status_t &status,
+				llvm::IRBuilder<> &builder,
+				scope_t::ref scope,
+				life_t::ref,
+				const ptr<const ast::item_t> &obj,
+				const bound_type_t::refs &args) const;
 	};
 
 	struct literal_expr_t : public expression_t {

@@ -138,12 +138,13 @@ ptr<const typeid_expr_t> typeid_expr_t::parse(parse_state_t &ps) {
 	chomp_token(tk_identifier);
 	chomp_token(tk_lparen);
 
-	auto value = expression_t::parse(ps);
+	auto value = reference_expr_t::parse(ps);
 	if (!!ps.status) {
 		assert(value != nullptr);
-		auto expr = ast::create<typeid_expr_t>(token, value);
+		auto typeid_expr = ast::create<typeid_expr_t>(token, value);
+		typeid_expr->expr = value;
 		chomp_token(tk_rparen);
-		return expr;
+		return typeid_expr;
 	}
 
 	assert(!ps.status);
@@ -155,9 +156,10 @@ ptr<const sizeof_expr_t> sizeof_expr_t::parse(parse_state_t &ps) {
 	chomp_token(tk_identifier);
 	chomp_token(tk_lparen);
 	expect_token(tk_identifier);
-	auto expr = ast::create<sizeof_expr_t>(callsite_token, ps.token);
+	auto sizeof_expr = ast::create<sizeof_expr_t>(callsite_token);
+	sizeof_expr->type_name = make_iid_impl({ps.token.text}, ps.token.location);
 	chomp_token(tk_rparen);
-	return expr;
+	return sizeof_expr;
 }
 
 ptr<const expression_t> parse_cast_wrap(parse_state_t &ps, ptr<expression_t> expr) {
