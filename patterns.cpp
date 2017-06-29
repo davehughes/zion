@@ -7,7 +7,7 @@
 #include "llvm_types.h"
 #include <iostream>
 
-bound_var_t::ref ast::match_block_t::resolve_statement(
+void ast::match_block_t::resolve_statement(
 		status_t &status,
 	   	llvm::IRBuilder<> &builder,
 	   	scope_t::ref block_scope,
@@ -15,7 +15,6 @@ bound_var_t::ref ast::match_block_t::resolve_statement(
 	   	local_scope_t::ref *,
 	   	bool *returns) const
 {
-
 #if 0
 	assert(life->life_form == lf_statement);
 
@@ -58,7 +57,6 @@ bound_var_t::ref ast::match_block_t::resolve_statement(
 #endif
 
 	assert(!status);
-	return nullptr;
 }
 
 bound_var_t::ref gen_type_check(
