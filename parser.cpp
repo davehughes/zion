@@ -141,7 +141,7 @@ ptr<const typeid_expr_t> typeid_expr_t::parse(parse_state_t &ps) {
 	auto value = reference_expr_t::parse(ps);
 	if (!!ps.status) {
 		assert(value != nullptr);
-		auto typeid_expr = ast::create<typeid_expr_t>(token, value);
+		auto typeid_expr = ast::create<typeid_expr_t>(token);
 		typeid_expr->expr = value;
 		chomp_token(tk_rparen);
 		return typeid_expr;
@@ -300,29 +300,15 @@ ptr<const statement_t> assignment_t::parse(parse_state_t &ps) {
 	return nullptr;
 }
 
-ptr<const param_list_decl_t> param_list_decl_t::parse(parse_state_t &ps) {
-	auto param_list_decl = create<ast::param_list_decl_t>(ps.token);
-	while (ps.token.tk != tk_rparen) {
-		param_list_decl->params.push_back(var_decl_t::parse_param(ps));
-		if (ps.token.tk == tk_comma) {
-			eat_token();
-		} else if (ps.token.tk != tk_rparen) {
-			ps.error("unexpected token in param_list_decl");
-			return nullptr;
-		}
-	}
-	return param_list_decl;
-}
-
 ptr<const param_list_t> param_list_t::parse(parse_state_t &ps) {
 	auto param_list = create<ast::param_list_t>(ps.token);
 	chomp_token(tk_lparen);
 	int i = 0;
 	while (ps.token.tk != tk_rparen) {
 		++i;
-		auto expr = expression_t::parse(ps);
-		if (expr) {
-			param_list->expressions.push_back(std::move(expr));
+		auto param = reference_expr_t::parse(ps);
+		if (!!ps.status) {
+			param_list->expressions.push_back(param);
 			if (ps.token.tk == tk_comma) {
 				eat_token();
 			} else if (ps.token.tk != tk_rparen) {
@@ -331,13 +317,17 @@ ptr<const param_list_t> param_list_t::parse(parse_state_t &ps) {
 			}
 			// continue and read the next parameter
 		} else {
-			assert(!ps.status);
-			return nullptr;
+			break;
 		}
 	}
-	chomp_token(tk_rparen);
 
-	return param_list;
+	if (!!ps.status) {
+		chomp_token(tk_rparen);
+		return param_list;
+	}
+
+	assert(!ps.status);
+	return nullptr;
 }
 
 ptr<const block_t> block_t::parse(parse_state_t &ps) {

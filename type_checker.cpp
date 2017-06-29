@@ -25,25 +25,23 @@
 
 /************************************************************************/
 
-bound_type_t::ref get_fully_bound_param_info(
+bound_type_t::ref get_fully_bound_dimension(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
-		const ast::dimension_t &obj,
 		scope_t::ref scope,
+		const ast::dimension_t::ref &obj,
 		atom &var_name)
 {
 	if (!!status) {
 		/* get the name of this parameter */
-		var_name = obj.token.text;
+		var_name = obj->token.text;
 
-		assert(obj.type_name->get_name().size() != 0);
+		assert(obj->type_name->get_name().size() != 0);
 
 		/* the user specified a type */
-		if (!!status) {
-			debug_above(6, log(log_info, "upserting type for param %s",
-						obj.type_name->str().c_str()));
-			return upsert_bound_type(status, builder, scope, obj.type_name);
-		}
+		debug_above(6, log(log_info, "upserting type for param %s",
+					obj->type_name->str().c_str()));
+		return upsert_bound_type(status, builder, scope, obj->type_name);
 	}
 
 	assert(!status);
@@ -368,18 +366,18 @@ bound_type_t::named_pairs zip_named_pairs(
 	return named_args;
 }
 
-void get_fully_bound_param_list_decl_variables(
+void get_fully_bound_dimensions(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
-		ast::param_list_decl_t &obj,
 		scope_t::ref scope,
+		const std::vector<ast::dimension_t::ref> &dimensions,
 		bound_type_t::named_pairs &params)
 {
 	if (!!status) {
-		for (auto param : obj.params) {
+		for (auto dimension : dimensions) {
 			atom var_name;
-			bound_type_t::ref param_type = get_fully_bound_param_info(status,
-					builder, *param, scope, var_name);
+			bound_type_t::ref param_type = get_fully_bound_dimension(status,
+					builder, scope, dimension, var_name);
 
 			if (!!status) {
 				params.push_back({var_name, param_type});
@@ -412,25 +410,20 @@ void type_check_fully_bound_function_decl(
 		const ast::function_decl_t &obj,
 		scope_t::ref scope,
 		bound_type_t::named_pairs &params,
-		bound_type_t::ref &return_value)
+		bound_type_t::ref &return_type)
 {
 	/* returns the parameters and the return value types fully resolved */
 	debug_above(4, log(log_info, "type checking function decl %s", obj.token.str().c_str()));
 
-	if (obj.param_list_decl) {
-		/* the parameter types as per the decl */
-		get_fully_bound_param_list_decl_variables(status, builder,
-				*obj.param_list_decl, scope, params);
+	/* the parameter types as per the decl */
+	get_fully_bound_dimensions(status, builder, scope, obj.params, params);
 
-		if (!!status) {
-			return_value = get_return_type_from_return_type_expr(status,
-					builder, obj.return_type, scope);
+	if (!!status) {
+		return_type = get_return_type_from_return_type_expr(status,
+				builder, obj.return_type, scope);
 
-			/* we got the params, and the return value */
-			return;
-		}
-	} else {
-		user_error(status, obj, "no param_list_decl was present");
+		/* we got the params, and the return value */
+		return;
 	}
 
 	assert(!status);

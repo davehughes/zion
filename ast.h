@@ -60,20 +60,12 @@ namespace ast {
 	struct var_decl_t;
 	struct reference_expr_t;
 
-	struct param_list_decl_t : public item_t {
-		typedef ptr<const param_list_decl_t> ref;
-
-		static ptr<const param_list_decl_t> parse(parse_state_t &ps);
-
-		std::vector<ptr<const var_decl_t>> params;
-	};
-
 	struct param_list_t : public item_t {
 		typedef ptr<const param_list_t> ref;
 
 		static ptr<const param_list_t> parse(parse_state_t &ps);
 
-		std::vector<ptr<const expression_t>> expressions;
+		std::vector<ptr<const reference_expr_t>> expressions;
 	};
 
 	struct expression_t : public item_t {
