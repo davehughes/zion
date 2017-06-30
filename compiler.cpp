@@ -136,7 +136,7 @@ void compiler_t::build_parse_linked(status_t &status, ptr<const ast::module_t> m
 	/* now, recursively make sure that all of the linked modules are parsed */
 	for (auto &link : module->linked_modules) {
 		auto linked_module_name = link->extern_module->get_canonical_name();
-		build_parse(status, link->extern_module->token.location, linked_module_name);
+		build_parse(status, link->extern_module->get_location(), linked_module_name);
 
 		if (!status) {
 			break;

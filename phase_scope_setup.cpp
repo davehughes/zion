@@ -43,7 +43,7 @@ void scope_setup_type_def(
 {
 	assert(obj.token.text.find(SCOPE_SEP) == std::string::npos);
 	assert(obj.token.text.size() != 0);
-	identifier::ref id = make_iid_impl({obj.token.text}, obj.token.location);
+	identifier::ref id = make_code_id(obj.token);
 	module_scope->put_unchecked_type(
 			status,
 			unchecked_type_t::create(id, obj.shared_from_this(), module_scope));

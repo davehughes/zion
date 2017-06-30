@@ -386,24 +386,6 @@ void get_fully_bound_dimensions(
 	}
 }
 
-bound_type_t::ref get_return_type_from_return_type_expr(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		types::type_t::ref type,
-		scope_t::ref scope)
-{
-	/* lookup the alias, default to void */
-	if (type != nullptr) {
-		return upsert_bound_type(status, builder, scope, type);
-	} else {
-		/* user specified no return type, default to void */
-		return scope->get_program_scope()->get_bound_type({"void"});
-	}
-
-	assert(!status);
-	return nullptr;
-}
-
 void type_check_fully_bound_function_decl(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
@@ -419,8 +401,7 @@ void type_check_fully_bound_function_decl(
 	get_fully_bound_dimensions(status, builder, scope, obj.params, params);
 
 	if (!!status) {
-		return_type = get_return_type_from_return_type_expr(status,
-				builder, obj.return_type, scope);
+		return_type = upsert_bound_type(status, builder, scope, obj.return_type_name);
 
 		/* we got the params, and the return value */
 		return;
@@ -431,54 +412,6 @@ void type_check_fully_bound_function_decl(
 
 bool type_is_unbound(types::type_t::ref type, types::type_t::map bindings) {
 	return type->rebind(bindings)->ftv_count() > 0;
-}
-
-bool is_function_defn_generic(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		scope_t::ref scope,
-		const ast::function_defn_t &obj)
-{
-	if (!!status) {
-		if (obj.decl->param_list_decl) {
-			/* check the parameters' genericity */
-			auto &params = obj.decl->param_list_decl->params;
-			for (auto &param : params) {
-				if (!param->type) {
-					debug_above(6, log(log_info, "found a missing parameter type on %s, defaulting it to an unnamed generic",
-								param->str().c_str()));
-					return true;
-				}
-
-				if (!!status) {
-					if (type_is_unbound(param->type, scope->get_type_variable_bindings())) {
-						debug_above(6, log(log_info, "found a generic parameter type on %s",
-									param->str().c_str()));
-						return true;
-					}
-				} else {
-					/* failed to check type genericity */
-					panic("what now hey?");
-					return true;
-				}
-			}
-		} else {
-			panic("function declaration has no parameter list");
-		}
-
-		if (!!status) {
-			if (obj.decl->return_type != nullptr) {
-				/* check the return type's genericity */
-				return obj.decl->return_type->ftv_count() > 0;
-			} else {
-				/* default to void, which is fully bound */
-				return false;
-			}
-		}
-	}
-
-	assert(!status);
-	return false;
 }
 
 function_scope_t::ref make_param_list_scope(
@@ -1747,26 +1680,6 @@ void type_check_program_variables(
 			/* prevent recurring checks */
 			debug_above(4, log(log_info, "checking module level variable %s",
 					   	node->token.str().c_str()));
-			if (auto function_defn = dyncast<const ast::function_defn_t>(node)) {
-				// TODO: decide whether we need treatment here
-				status_t local_status;
-				if (is_function_defn_generic(local_status, builder,
-							unchecked_var->module_scope, *function_defn))
-			   	{
-					/* this is a generic function, or we've already checked
-					 * it so let's skip checking it */
-					status |= local_status;
-					continue;
-				}
-			}
-
-			if (auto function_defn = dyncast<const ast::function_defn_t>(node)) {
-				if (getenv("MAIN_ONLY") != nullptr && node->token.text != "__main__") {
-					debug_above(8, log(log_info, "skipping %s because it's not '__main__'",
-								node->str().c_str()));
-					continue;
-				}
-			}
 
 			status_t local_status;
 			if (auto stmt = dyncast<const ast::statement_t>(node)) {
@@ -1774,7 +1687,7 @@ void type_check_program_variables(
 						local_status, builder, unchecked_var->module_scope,
 						nullptr, nullptr, nullptr);
 				status |= local_status;
-			} else if (auto data_ctor = dyncast<const ast::type_product_t>(node)) {
+			} else if (auto data_ctor = dyncast<const ast::struct_t>(node)) {
 				/* ignore until instantiation at a callsite */
 			} else {
 				assert(!"unhandled unchecked node at module scope");
