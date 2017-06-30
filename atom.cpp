@@ -98,11 +98,6 @@ size_t atom::size() const {
 	return atoms[iatom].size();
 }
 
-bool atom::is_generic_type_alias() const {
-	const auto &val = str();
-	return starts_with(val, "any ") || val == "any";
-}
-
 atom::set to_set(atom::many atoms) {
 	atom::set set;
 	std::for_each(

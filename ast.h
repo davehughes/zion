@@ -19,10 +19,25 @@ namespace ast {
 		typedef ptr<const item_t> ref;
 
 		virtual ~item_t() throw() = 0;
-		std::string str() const;
-		location_t get_location() const { return token.location; }
+		location_t get_location() const { return get_token().location; }
 
+		virtual void set_token(const token_t &token) const = 0;
+		virtual token_t get_token() const = 0;
+		virtual std::string str() const { assert(false); return "CODE"; }
+	};
+
+	template <typename T>
+	struct item_impl_t : public T {
 		token_t token;
+
+		virtual ~item_impl_t() {}
+		void set_token(const token_t &token_) { 
+			token = token_;
+		}
+
+		token_t get_token() const {
+			return token;
+		}
 	};
 
 	void log_named_item_create(const char *type, const std::string &name);
@@ -30,14 +45,14 @@ namespace ast {
 	template <typename T>
 	ptr<T> create(const token_t &token) {
 		auto item = ptr<T>(new T());
-		item->token = token;
+		item->set_token(token);
 		return item;
 	}
 
 	template <typename T, typename... Args>
 	ptr<T> create(const token_t &token, Args... args) {
 		auto item = ptr<T>(new T(args...));
-		item->token = token;
+		item->set_token(token);
 		return item;
 	}
 
@@ -60,7 +75,7 @@ namespace ast {
 	struct var_decl_t;
 	struct reference_expr_t;
 
-	struct param_list_t : public item_t {
+	struct param_list_t : public item_impl_t<item_t> {
 		typedef ptr<const param_list_t> ref;
 
 		static ptr<const param_list_t> parse(parse_state_t &ps);
@@ -68,7 +83,7 @@ namespace ast {
 		std::vector<ptr<const reference_expr_t>> expressions;
 	};
 
-	struct expression_t : public item_t {
+	struct expression_t : public virtual item_t {
 		typedef ptr<const expression_t> ref;
 
 		virtual ~expression_t() {}
@@ -179,7 +194,7 @@ namespace ast {
 				bool *returns) const;
 	};
 
-	struct type_decl_t : public item_t {
+	struct type_decl_t : public item_impl_t<item_t> {
 		typedef ptr<const type_decl_t> ref;
 
 		type_decl_t();
@@ -201,7 +216,7 @@ namespace ast {
 		bool force_cast = false;
 	};
 
-	struct dimension_t : public item_t {
+	struct dimension_t : public item_impl_t<item_t> {
 		typedef ptr<const dimension_t> ref;
 		virtual ~dimension_t() throw() {}
 
@@ -210,7 +225,7 @@ namespace ast {
 		identifier::ref type_name;
 	};
 
-	struct user_defined_type_t : public item_t {
+	struct user_defined_type_t : public item_impl_t<item_t> {
 		virtual ~user_defined_type_t() throw() {}
 
 		static ptr<const user_defined_type_t> parse(parse_state_t &ps);
@@ -248,7 +263,7 @@ namespace ast {
 		std::vector<dimension_t::ref> dimensions;
 	};
 
-	struct var_decl_t : public statement_t {
+	struct var_decl_t : public item_impl_t<statement_t> {
 		typedef ptr<const var_decl_t> ref;
 
 		static ptr<const var_decl_t> parse(parse_state_t &ps);
@@ -305,7 +320,7 @@ namespace ast {
 		std::vector<ptr<const statement_t>> statements;
 	};
 
-	struct function_decl_t : public item_t {
+	struct function_decl_t : public item_impl_t<item_t> {
 		typedef ptr<const function_decl_t> ref;
 
 		static ptr<const function_decl_t> parse(parse_state_t &ps);
@@ -369,7 +384,7 @@ namespace ast {
 		ptr<const block_t> block;
 	};
 
-	struct pattern_block_t : public item_t {
+	struct pattern_block_t : public item_impl_t<item_t> {
 		typedef ptr<const pattern_block_t> ref;
 		typedef std::vector<ref> refs;
 
@@ -406,7 +421,7 @@ namespace ast {
 		pattern_block_t::refs pattern_blocks;
 	};
 
-	struct module_decl_t : public item_t {
+	struct module_decl_t : public item_impl_t<item_t> {
 		typedef ptr<const module_decl_t> ref;
 
 		static ptr<const module_decl_t> parse(parse_state_t &ps, bool skip_module_token=false);
@@ -447,7 +462,7 @@ namespace ast {
 		ptr<const function_decl_t> extern_function;
 	};
 
-	struct module_t : public std::enable_shared_from_this<module_t>, public item_t {
+	struct module_t : public std::enable_shared_from_this<module_t>, public item_impl_t<item_t> {
 		typedef ptr<const module_t> ref;
 
 
@@ -465,7 +480,7 @@ namespace ast {
 		std::vector<ptr<const link_function_statement_t>> linked_functions;
 	};
 
-	struct program_t : public item_t {
+	struct program_t : public item_impl_t<item_t> {
 		typedef ptr<const program_t> ref;
 
 		virtual ~program_t() {}
@@ -486,7 +501,11 @@ namespace ast {
 		ptr<const ast::expression_t> when_true, when_false;
 	};
 
-	struct reference_expr_t : public expression_t, public can_reference_overloads_t {
+	struct ref_expr_interface_t : public expression_t, public statement_t, public can_reference_overloads_t {
+		virtual ~ref_expr_interface_t() = 0;
+	};
+
+	struct reference_expr_t : public item_impl_t<ref_expr_interface_t> {
 		typedef ptr<const reference_expr_t> ref;
 
 		static ptr<const reference_expr_t> parse(parse_state_t &ps);

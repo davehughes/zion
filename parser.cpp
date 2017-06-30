@@ -73,7 +73,7 @@ ptr<const statement_t> link_statement_parse(parse_state_t &ps) {
 		auto link_function_statement = create<ast::link_function_statement_t>(link_token);
 		auto function_decl = function_decl_t::parse(ps);
 		if (function_decl) {
-			link_function_statement->function_name = function_decl->token;
+			link_function_statement->function_name = function_decl->get_token();
 			link_function_statement->extern_function = function_decl;
 		} else {
 			assert(!ps.status);
@@ -157,7 +157,7 @@ ptr<const sizeof_expr_t> sizeof_expr_t::parse(parse_state_t &ps) {
 	chomp_token(tk_lparen);
 	expect_token(tk_identifier);
 	auto sizeof_expr = ast::create<sizeof_expr_t>(callsite_token);
-	sizeof_expr->type_name = make_iid_impl({ps.token.text}, ps.token.location);
+	sizeof_expr->type_name = make_code_id(ps.token);
 	chomp_token(tk_rparen);
 	return sizeof_expr;
 }
@@ -208,7 +208,7 @@ ptr<const expression_t> expression_t::parse(parse_state_t &ps) {
 						chomp_token(tk_colon);
 						auto when_false_expr = expression_t::parse(ps);
 						if (!!ps.status) {
-							auto ternary = ast::create<ternary_expr_t>(ref_expr->token);
+							auto ternary = ast::create<ternary_expr_t>(ref_expr->get_token());
 							ternary->condition = ref_expr;
 							ternary->when_true = when_true_expr;
 							ternary->when_false = when_false_expr;
@@ -442,7 +442,7 @@ ptr<const function_decl_t> function_decl_t::parse(parse_state_t &ps) {
 
 	if (!!ps.status) {
 		expect_token(tk_identifier);
-		function_decl->return_type_name = make_iid_impl({ps.token.text}, ps.token.location);
+		function_decl->return_type_name = make_code_id(ps.token);
 
 		return function_decl;
 	}
@@ -459,7 +459,7 @@ ptr<const function_defn_t> function_defn_t::parse(parse_state_t &ps) {
 		auto block = block_t::parse(ps);
 		if (!!ps.status) {
 			assert(block != nullptr);
-			auto function_defn = create<ast::function_defn_t>(function_decl->token);
+			auto function_defn = create<ast::function_defn_t>(function_decl->get_token());
 			function_defn->decl = function_decl;
 			function_defn->block = block;
 			return function_defn;
@@ -592,7 +592,7 @@ polymorph_t::ref polymorph_t::parse(parse_state_t &ps, token_t type_name) {
 
 	auto polymorph = ast::create<polymorph_t>(type_name);
 	while (ps.token.tk == tk_identifier) {
-		auto subtype = make_iid_impl({ps.token.text}, ps.token.location);
+		auto subtype = make_code_id(ps.token);
 		if (polymorph->subtypes.find(subtype) != polymorph->subtypes.end()) {
 			ps.error("subtype " c_id("%s") " already exists", ps.token.text.c_str()); 
 			ps.advance();
@@ -639,7 +639,7 @@ dimension_t::ref dimension_t::parse(parse_state_t &ps) {
 	ps.advance();
 	expect_token(tk_identifier);
 	auto dimension = ast::create<dimension_t>(var_name);
-	dimension->type_name = make_iid_impl({ps.token.text}, ps.token.location);
+	dimension->type_name = make_code_id(ps.token);
 	return dimension;
 }
 

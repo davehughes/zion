@@ -31,7 +31,6 @@ struct atom {
 	const char *c_str() const;
 	const std::string str() const;
 	size_t size() const;
-	bool is_generic_type_alias() const;
 
 	int iatom;
 

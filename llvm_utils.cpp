@@ -566,7 +566,7 @@ bound_var_t::ref llvm_start_function(status_t &status,
 			/* create the bound type for the ctor function */
 			auto function_type = bound_type_t::create(
 					get_function_type(args, data_type),
-					node->token.location,
+					node->get_location(),
 					llvm_fn_type);
 
 			/* now let's generate our actual data ctor fn */
@@ -578,7 +578,7 @@ bound_var_t::ref llvm_start_function(status_t &status,
 			/* create the actual bound variable for the fn */
 			bound_var_t::ref function = bound_var_t::create(
 					INTERNAL_LOC(), name,
-					function_type, llvm_function, make_code_id(node->token),
+					function_type, llvm_function, make_code_id(node->get_token()),
 					false /*is_lhs*/,
 					false /*is_global*/);
 
