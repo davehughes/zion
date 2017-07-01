@@ -21,7 +21,7 @@ namespace ast {
 		virtual ~item_t() throw() = 0;
 		location_t get_location() const { return get_token().location; }
 
-		virtual void set_token(const token_t &token) const = 0;
+		virtual void set_token(const token_t &token) = 0;
 		virtual token_t get_token() const = 0;
 		virtual std::string str() const { assert(false); return "CODE"; }
 	};
@@ -31,6 +31,7 @@ namespace ast {
 		token_t token;
 
 		virtual ~item_impl_t() {}
+
 		void set_token(const token_t &token_) { 
 			token = token_;
 		}
@@ -96,7 +97,7 @@ namespace ast {
 				life_t::ref life) const = 0;
 	};
 
-	struct continue_flow_t : public statement_t {
+	struct continue_flow_t : public item_impl_t<statement_t> {
 		typedef ptr<const continue_flow_t> ref;
 
 		virtual void resolve_statement(
@@ -108,7 +109,7 @@ namespace ast {
 				bool *returns) const;
 	};
 
-	struct break_flow_t : public statement_t {
+	struct break_flow_t : public item_impl_t<statement_t> {
 		typedef ptr<const break_flow_t> ref;
 
 		virtual void resolve_statement(
@@ -120,19 +121,7 @@ namespace ast {
 				bool *returns) const;
 	};
 
-	struct pass_flow_t : public statement_t {
-		typedef ptr<const pass_flow_t> ref;
-
-		virtual void resolve_statement(
-				status_t &status,
-				llvm::IRBuilder<> &builder,
-				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
-	};
-
-	struct typeid_expr_t : public expression_t {
+	struct typeid_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const typeid_expr_t> ref;
 
 		virtual bound_var_t::ref resolve_expression(
@@ -145,7 +134,7 @@ namespace ast {
 		ptr<const reference_expr_t> expr;
 	};
 
-	struct sizeof_expr_t : public expression_t {
+	struct sizeof_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const typeid_expr_t> ref;
 
 		virtual bound_var_t::ref resolve_expression(
@@ -158,7 +147,9 @@ namespace ast {
 		identifier::ref type_name;
 	};
 
-	struct callsite_expr_t : public expression_t, public statement_t {
+	struct callsite_expr_interface_t : public expression_t, public statement_t {};
+
+	struct callsite_expr_t : public item_impl_t<callsite_expr_interface_t> {
 		typedef ptr<const callsite_expr_t> ref;
 
 		static ref parse(parse_state_t &ps, ptr<const reference_expr_t> ref_expr);
@@ -179,7 +170,7 @@ namespace ast {
 		ptr<const param_list_t> params;
 	};
 
-	struct return_statement_t : public statement_t {
+	struct return_statement_t : public item_impl_t<statement_t> {
 		typedef ptr<const return_statement_t> ref;
 
 		static ptr<const return_statement_t> parse(parse_state_t &ps);
@@ -202,7 +193,7 @@ namespace ast {
 		static ref parse(parse_state_t &ps, token_t name_token);
 	};
 
-	struct cast_expr_t : public expression_t {
+	struct cast_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const cast_expr_t> ref;
 
 		virtual bound_var_t::ref resolve_expression(
@@ -267,7 +258,6 @@ namespace ast {
 		typedef ptr<const var_decl_t> ref;
 
 		static ptr<const var_decl_t> parse(parse_state_t &ps);
-		static ptr<const var_decl_t> parse_param(parse_state_t &ps);
 		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -288,7 +278,7 @@ namespace ast {
 		ptr<const expression_t> initializer;
 	};
 
-	struct assignment_t : public statement_t {
+	struct assignment_t : public item_impl_t<statement_t> {
 		typedef ptr<const assignment_t> ref;
 
 		static ptr<const statement_t> parse(parse_state_t &ps);
@@ -304,7 +294,7 @@ namespace ast {
 		ptr<const expression_t> rhs;
 	};
 
-	struct block_t : public statement_t {
+	struct block_t : public item_impl_t<statement_t> {
 		typedef ptr<const block_t> ref;
 
 
@@ -329,7 +319,7 @@ namespace ast {
 		identifier::ref return_type_name;
 	};
 
-	struct function_defn_t : public statement_t {
+	struct function_defn_t : public item_impl_t<statement_t> {
 		typedef ptr<const function_defn_t> ref;
 
 		static ptr<const function_defn_t> parse(parse_state_t &ps);
@@ -353,7 +343,7 @@ namespace ast {
 		ptr<const block_t> block;
 	};
 
-	struct if_block_t : public statement_t {
+	struct if_block_t : public item_impl_t<statement_t> {
 		typedef ptr<const if_block_t> ref;
 
 		static ptr<const if_block_t> parse(parse_state_t &ps);
@@ -368,7 +358,7 @@ namespace ast {
 		ptr<const statement_t> else_;
 	};
 
-	struct loop_block_t : public statement_t {
+	struct loop_block_t : public item_impl_t<statement_t> {
 		typedef ptr<const loop_block_t> ref;
 
 
@@ -405,7 +395,7 @@ namespace ast {
 		ptr<const block_t> block;
 	};
 
-	struct match_block_t : public statement_t {
+	struct match_block_t : public item_impl_t<statement_t> {
 		typedef ptr<const match_block_t> ref;
 
 		static ptr<const match_block_t> parse(parse_state_t &ps);
@@ -432,7 +422,7 @@ namespace ast {
 		token_t name;
 	};
 
-	struct link_module_statement_t : public statement_t {
+	struct link_module_statement_t : public item_impl_t<item_t> {
 		typedef ptr<const link_module_statement_t> ref;
 
 		virtual void resolve_statement(
@@ -446,17 +436,14 @@ namespace ast {
 		ptr<const module_decl_t> extern_module;
 	};
 
-	struct link_function_statement_t : public statement_t {
+	struct link_function_statement_t : public item_impl_t<item_t> {
 		typedef ptr<const link_function_statement_t> ref;
 
 
-		virtual void resolve_statement(
+		virtual bound_var_t::ref resolve_linked_function(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
-				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				scope_t::ref scope) const;
 
 		token_t function_name;
 		ptr<const function_decl_t> extern_function;
@@ -488,7 +475,7 @@ namespace ast {
 		std::unordered_set<ptr<const module_t>> modules;
 	};
 
-	struct ternary_expr_t : public expression_t {
+	struct ternary_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const ternary_expr_t> ref;
 
 		virtual bound_var_t::ref resolve_expression(
@@ -501,7 +488,7 @@ namespace ast {
 		ptr<const ast::expression_t> when_true, when_false;
 	};
 
-	struct ref_expr_interface_t : public expression_t, public statement_t, public can_reference_overloads_t {
+	struct ref_expr_interface_t : public expression_t, public can_reference_overloads_t {
 		virtual ~ref_expr_interface_t() = 0;
 	};
 
@@ -523,7 +510,7 @@ namespace ast {
 				const bound_type_t::refs &args) const;
 	};
 
-	struct literal_expr_t : public expression_t {
+	struct literal_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const literal_expr_t> ref;
 
 		static ptr<const expression_t> parse(parse_state_t &ps);
@@ -534,7 +521,7 @@ namespace ast {
 				life_t::ref life) const;
 	};
 
-	struct array_literal_expr_t : public expression_t {
+	struct array_literal_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const array_literal_expr_t> ref;
 
 		static ptr<const expression_t> parse(parse_state_t &ps);
@@ -547,7 +534,7 @@ namespace ast {
 		std::vector<ptr<const expression_t>> items;
 	};
 
-	struct array_index_expr_t : public expression_t {
+	struct array_index_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const array_index_expr_t> ref;
 
 		static ptr<const expression_t> parse(parse_state_t &ps);

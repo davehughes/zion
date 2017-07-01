@@ -64,7 +64,7 @@ ptr<const return_statement_t> return_statement_t::parse(parse_state_t &ps) {
 	return return_statement;
 }
 
-ptr<const statement_t> link_statement_parse(parse_state_t &ps) {
+ptr<const item_t> link_statement_parse(parse_state_t &ps) {
 	expect_token(tk_link);
 	auto link_token = ps.token;
 	ps.advance();

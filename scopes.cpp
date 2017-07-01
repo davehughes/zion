@@ -32,7 +32,7 @@ bound_var_t::ref get_bound_variable_from_scope(
 		} else {
 			assert(overloads.size() > 1);
 			user_error(status, *obj, "a non-callsite reference to an overloaded variable usage %s was found. overloads at this immediate location are:\n%s",
-					obj->token.str().c_str(),
+					obj->get_token().str().c_str(),
 					::str(overloads).c_str());
 			return nullptr;
 		}
@@ -42,7 +42,7 @@ bound_var_t::ref get_bound_variable_from_scope(
 
 	debug_above(3, log(log_info,
 			   	"no bound variable found when resolving %s (looking for " c_id("%s") " in " c_id("%s") ")", 
-				obj->token.str().c_str(),
+				obj->get_token().str().c_str(),
 				symbol.c_str(),
 				scope_name.c_str()));
 	return nullptr;
@@ -340,7 +340,7 @@ void dump_bindings(
 			const unchecked_var_t::overload_vector &overloads = var_pair.second;
 			const char *sep = "";
 			for (auto &var_overload : overloads) {
-				os << sep << var_overload->node->token.str();
+				os << sep << var_overload->node->get_token().str();
 				sep = ", ";
 			}
 			os << "]" << std::endl;
@@ -356,7 +356,7 @@ void dump_bindings(
 		os << "unchecked types:\n";
 		for (auto &type_pair : unchecked_types) {
 			os << C_TYPE << type_pair.first << C_RESET << ": ";
-			os << type_pair.second->node->token.str() << std::endl;
+			os << type_pair.second->node->get_token().str() << std::endl;
 		}
 	}
 }

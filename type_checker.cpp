@@ -417,7 +417,7 @@ bool type_is_unbound(types::type_t::ref type, types::type_t::map bindings) {
 function_scope_t::ref make_param_list_scope(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
-		const ast::function_decl_t &obj,
+		const ast::function_decl_t &function_decl,
 		scope_t::ref &scope,
 		life_t::ref life,
 		bound_var_t::ref function_var,
@@ -430,7 +430,7 @@ function_scope_t::ref make_param_list_scope(
 		auto new_scope = scope->new_function_scope(
 				string_format("function-%s", function_var->name.c_str()));
 
-		assert(obj.param_list_decl->params.size() == params.size());
+		assert(function_decl.params.size() == params.size());
 
 		llvm::Function *llvm_function = llvm::cast<llvm::Function>(function_var->get_llvm_value());
 		llvm::Function::arg_iterator args = llvm_function->arg_begin();
@@ -458,7 +458,7 @@ function_scope_t::ref make_param_list_scope(
 			builder.CreateStore(llvm_param, llvm_alloca);	
 
 			auto param_var = bound_var_t::create(INTERNAL_LOC(), param.first, param.second,
-					llvm_alloca, make_code_id(obj.param_list_decl->params[i++]->token),
+					llvm_alloca, make_code_id(function_decl.params[i++]->token),
 					true /*is_lhs*/, false /*is_global*/);
 
 			bound_type_t::ref return_type = get_function_return_type(scope, function_var->type);
@@ -517,28 +517,25 @@ void ast::link_module_statement_t::resolve_statement(
 		 * future version they can be used as run-time variables, so that we
 		 * can pass modules around for another level of polymorphism. */
 		bound_module_t::ref module_variable = bound_module_t::create(INTERNAL_LOC(),
-				link_as_name.text, make_code_id(token), linked_module_scope);
+				{extern_module->get_name().text}, make_code_id(token), linked_module_scope);
 
 		module_scope->put_bound_variable(status, module_variable->name, module_variable);
 
 		if (!!status) {
-			return module_variable;
+			return;
 		}
 	} else {
 		user_error(status, *this, "can't find module %s", linked_module_name.c_str());
 	}
 
 	assert(!status);
-	return nullptr;
+	return;
 }
 
-void ast::link_function_statement_t::resolve_statement(
+void ast::link_function_statement_t::resolve_linked_function(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
-		scope_t::ref scope,
-		life_t::ref life,
-		local_scope_t::ref *new_scope,
-		bool *returns) const
+		scope_t::ref scope) const
 {
 	/* FFI */
 	module_scope_t::ref module_scope = dyncast<module_scope_t>(scope);
@@ -570,7 +567,7 @@ void ast::link_function_statement_t::resolve_statement(
 
 			/* get the full function type */
 			types::type_function_t::ref function_sig = get_function_type(
-					inbound_context, args, return_value);
+					args, return_value);
 			debug_above(3, log(log_info, "%s has type %s",
 						function_name.str().c_str(),
 						function_sig->str().c_str()));
@@ -581,11 +578,12 @@ void ast::link_function_statement_t::resolve_statement(
 
 			return bound_var_t::create(
 					INTERNAL_LOC(),
-					scope->make_fqn(function_name.text),
-					bound_function_type,
-					llvm_value,
-					make_code_id(extern_function->token),
-					false /*is_lhs*/, false /*is_global*/);
+				   	scope->make_fqn(function_name.text),
+				   	bound_function_type,
+				   	llvm_value,
+				   	make_code_id(extern_function->token),
+				   	false /*is_lhs*/,
+				   	false /*is_global*/);
 		}
 	} else {
 		auto bound_var = scope->get_bound_variable(status, shared_from_this(), function_name.text);
@@ -594,7 +592,7 @@ void ast::link_function_statement_t::resolve_statement(
 	}
 
 	assert(!status);
-	return nullptr;
+	return;
 }
 
 bound_var_t::ref ast::dot_expr_t::resolve_overrides(
@@ -724,11 +722,14 @@ bound_var_t::ref ast::reference_expr_t::resolve_expression(
 	bound_var_t::ref var = scope->get_bound_variable(status, shared_from_this(),
 			token.text);
 
-	if (!var) {
+	if (!!status) {
+		return var;
+	} else {
 		user_error(status, *this, "undefined symbol " c_id("%s"), token.text.c_str());
 	}
 
-	return var;
+	assert(!status);
+	return nullptr;
 }
 
 bound_var_t::ref ast::array_index_expr_t::resolve_expression(
@@ -1561,8 +1562,8 @@ void type_check_module_links(
 
 		if (!!status) {
 			for (auto &link : obj.linked_functions) {
-				bound_var_t::ref link_value = link->resolve_instantiation(
-						status, builder, scope, nullptr, nullptr, nullptr);
+				bound_var_t::ref link_value = link->resolve_linked_function(
+						status, builder, scope);
 
 				if (!!status) {
 					if (link->function_name.text.size() != 0) {

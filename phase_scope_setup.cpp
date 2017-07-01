@@ -17,7 +17,7 @@ void scope_setup_error(status_t &status, const ast::item_t &item, const char *fo
 	auto str = string_formatv(format, args);
 	va_end(args);
 
-	user_error(status, item.token.location, "scope-error: %s", str.c_str());
+	user_error(status, item.get_location(), "scope-error: %s", str.c_str());
 }
 
 
