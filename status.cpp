@@ -43,7 +43,7 @@ void user_message(log_level_t level, status_t &status, const ast::item_t &item, 
     auto str = string_formatv(format, args);
     va_end(args);
 
-    status.emit_message(level, item.token.location, "%s", str.c_str());
+    status.emit_message(level, item.get_location(), "%s", str.c_str());
 }
 
 void user_message(log_level_t level, status_t &status, location_t location, const char *format, ...) {
