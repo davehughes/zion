@@ -662,7 +662,8 @@ llvm::Value *llvm_call_allocator(
 {
 	debug_above(5, log(log_info, "calling allocator for %s",
 				data_type->str().c_str()));
-	bound_var_t::ref mem_alloc_var = program_scope->get_bound_variable(status, node, "__create_var");
+	bound_var_t::ref mem_alloc_var = program_scope->get_bound_variable(status,
+			node->get_location(), "__create_var");
 
 	if (!!status) {
 		bound_var_t::ref dtor_fn = maybe_get_dtor(status, builder,
@@ -1021,7 +1022,7 @@ bound_var_t::ref call_const_subscript_operator(
 						false/*is_lhs*/, false /*is_global*/);
 			}
 		} else {
-			user_error(status, *node, "index out of range");
+			user_error(status, node, "index out of range");
 		}
 	} else {
 		return type_check_get_item_with_int_literal(status, builder, scope, life,

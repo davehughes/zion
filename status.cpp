@@ -1,3 +1,4 @@
+#include "zion.h"
 #include "status.h"
 #include "logger_decls.h"
 #include "ast.h"
@@ -37,16 +38,26 @@ void status_t::emit_messagev(log_level_t level, location_t location, const char 
     }
 }
 
-void user_message(log_level_t level, status_t &status, const ast::item_t &item, const char *format, ...) {
+void user_message(
+		log_level_t level,
+	   	status_t &status,
+	   	const ast::item_t::ref &item,
+	   	const char *format, ...)
+{
     va_list args;
     va_start(args, format);
     auto str = string_formatv(format, args);
     va_end(args);
 
-    status.emit_message(level, item.get_location(), "%s", str.c_str());
+    status.emit_message(level, item->get_location(), "%s", str.c_str());
 }
 
-void user_message(log_level_t level, status_t &status, location_t location, const char *format, ...) {
+void user_message(
+		log_level_t level,
+	   	status_t &status,
+	   	location_t location,
+	   	const char *format, ...)
+{
     va_list args;
     va_start(args, format);
     auto str = string_formatv(format, args);

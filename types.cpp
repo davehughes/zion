@@ -723,6 +723,14 @@ types::type_args_t::ref type_args(
 	return make_ptr<types::type_args_t>(args, name_index);
 }
 
+types::type_args_t::ref type_args(identifier::refs ids, types::name_index_t name_index) {
+	types::type_t::refs args;
+	for (auto id : ids) {
+		args.push_back(type_id(id));
+	}
+	return make_ptr<types::type_args_t>(args, name_index);
+}
+
 types::type_module_t::ref type_module(types::type_t::ref module_type) {
 	return make_ptr<types::type_module_t>(module_type);
 }
@@ -732,11 +740,10 @@ types::type_ref_t::ref type_ref(types::type_t::ref element_type) {
 }
 
 types::type_function_t::ref type_function(
-		types::type_t::ref inbound_context,
 		types::type_args_t::ref args,
 		types::type_t::ref return_type)
 {
-	return make_ptr<types::type_function_t>(inbound_context, args, return_type);
+	return make_ptr<types::type_function_t>(args, return_type);
 }
 
 types::type_t::ref type_sum_safe(status_t &status, types::type_t::refs options) {

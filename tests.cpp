@@ -291,7 +291,7 @@ bool compare_lispy_results(std::string text, ast::item_t &result, std::string ex
 
 template <typename T, typename... Args>
 bool check_parse(std::string text, std::string filename = test_module_name) {
-	auto result = parse_text<T>(text, filename);
+	auto result = parse_text<const T>(text, filename);
 	if (!result) {
 		debug(log(log_error, "failed to get a parsed result"));
 		return false;

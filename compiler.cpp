@@ -610,7 +610,7 @@ void compiler_t::build_type_check_and_code_gen(status_t &status) {
 	if (!!status) {
 		/* set up the names that point back into the AST resolved to the right
 		 * module scopes */
-		status = scope_setup_program(*program, *this);
+		status = scope_setup_program(program, *this);
 
 		if (!!status) {
 			type_check_program(status, builder, *program, *this);

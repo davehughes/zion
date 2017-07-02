@@ -13,8 +13,19 @@ lexer_t::lexer_t(atom filename, std::istream &is)
 {
 }
 
-bool istchar_start(char ch);
-bool istchar(char ch);
+bool istchar_start(char ch) {
+	return isalpha(ch) || ch == '_';
+}
+
+bool istchar(char ch) {
+	if (istchar_start(ch))
+		return true;
+
+	if (isdigit(ch))
+		return true;
+
+	return false;
+}
 
 #define gts_keyword_case_ex(wor, letter, _gts) \
 		case gts_##wor: \
@@ -348,7 +359,7 @@ bool lexer_t::get_token(
 
 	if (gts != gts_error) {
 		if (tk != tk_none) {
-			tk = translate_lltk(tk, token_text);
+			tk = translate_tk(tk, token_text);
 			debug_above(12, log(log_info, "got llz token %s %s",
 						tkstr(tk), token_text.c_str()));
 

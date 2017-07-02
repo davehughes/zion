@@ -1,6 +1,7 @@
 #pragma once
 #include "location.h"
 #include "logger_decls.h"
+#include "ptr.h"
 
 struct status_t {
 	template <typename T>
@@ -23,7 +24,7 @@ private:
 };
 
 namespace ast { struct item_t; }
-void user_message(log_level_t level, status_t &status, const ast::item_t &item, const char *msg, ...);
+void user_message(log_level_t level, status_t &status, const ptr<const ast::item_t> &item, const char *msg, ...);
 void user_message(log_level_t level, status_t &status, location_t location, const char *format, ...);
 
 template <typename Loc>

@@ -15,7 +15,7 @@ const char SCOPE_SEP_CHAR = '/';
 
 bound_var_t::ref get_bound_variable_from_scope(
 		status_t &status,
-		const ptr<const ast::item_t> &obj,
+		location_t location,
 		atom scope_name,
 		atom symbol,
 		bound_var_t::map bound_vars,
@@ -31,18 +31,17 @@ bound_var_t::ref get_bound_variable_from_scope(
 			return overloads.begin()->second;
 		} else {
 			assert(overloads.size() > 1);
-			user_error(status, *obj, "a non-callsite reference to an overloaded variable usage %s was found. overloads at this immediate location are:\n%s",
-					obj->get_token().str().c_str(),
+			user_error(status, location,
+				   	"a non-callsite reference to an overloaded variable was found. overloads at this immediate location are:\n%s",
 					::str(overloads).c_str());
 			return nullptr;
 		}
 	} else if (parent_scope != nullptr) {
-		return parent_scope->get_bound_variable(status, obj, symbol);
+		return parent_scope->get_bound_variable(status, location, symbol);
 	}
 
 	debug_above(3, log(log_info,
-			   	"no bound variable found when resolving %s (looking for " c_id("%s") " in " c_id("%s") ")", 
-				obj->get_token().str().c_str(),
+			   	"no bound variable found when resolving " c_id("%s") " in " c_id("%s") ")", 
 				symbol.c_str(),
 				scope_name.c_str()));
 	return nullptr;
@@ -222,13 +221,13 @@ void runnable_scope_t::check_or_update_return_type_constraint(
 				return_type_constraint->get_type(),
 				return_type->get_type(),
 				get_typename_env(),
-				get_type_variable_bindings());
+				{});
 
 		if (!!status) {
 			if (!unification.result) {
 				// TODO: consider directional unification here
 				// TODO: consider storing more useful info in return_type_constraint
-				user_error(status, *return_statement,
+				user_error(status, return_statement,
 						"return expression type %s does not match %s",
 						return_type->get_type()->str().c_str(),
 						return_type_constraint->get_type()->str().c_str());
@@ -423,7 +422,6 @@ bool module_scope_impl_t::has_checked(const ptr<const ast::item_t> &node) const 
 }
 
 void module_scope_impl_t::mark_checked(
-		status_t &status,
 	   	llvm::IRBuilder<> &builder,
 	   	const ptr<const ast::item_t> &node) {
 	assert(!has_checked(node));
@@ -447,10 +445,10 @@ void module_scope_impl_t::put_unchecked_type(
 		unchecked_types_ordered.push_back(unchecked_type);
 	} else {
 		/* this unchecked type already exists */
-		user_error(status, *unchecked_type->node, "type %s already exists",
+		user_error(status, unchecked_type->node, "type %s already exists",
 				unchecked_type->id->str().c_str());
 
-		user_error(status, *unchecked_type_iter->second->node,
+		user_error(status, unchecked_type_iter->second->node,
 				"see type %s declaration",
 				unchecked_type_iter->second->id->str().c_str());
 	}

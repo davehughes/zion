@@ -62,5 +62,6 @@ bool in(U item, const COLL &set) {
 	return set.find(item) != set.end();
 }
 
+void init_atoms();
 atom::set to_set(atom::many atoms);
 void dump_atoms();

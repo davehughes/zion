@@ -11,11 +11,12 @@
 #include "type_checker.h"
 #include "callable.h"
 #include "life.h"
+#include "code_id.h"
 
 struct parse_state_t;
 
 namespace ast {
-	struct item_t : std::enable_shared_from_this<item_t> {
+	struct item_t {
 		typedef ptr<const item_t> ref;
 
 		virtual ~item_t() throw() = 0;
@@ -26,7 +27,7 @@ namespace ast {
 		virtual std::string str() const { assert(false); return "CODE"; }
 	};
 
-	template <typename T>
+	template <typename T=item_t>
 	struct item_impl_t : public T {
 		token_t token;
 
@@ -57,7 +58,7 @@ namespace ast {
 		return item;
 	}
 
-	struct statement_t : public item_t {
+	struct statement_t : public virtual item_t {
 		typedef ptr<const statement_t> ref;
 
 		virtual ~statement_t() {}
@@ -121,7 +122,7 @@ namespace ast {
 				bool *returns) const;
 	};
 
-	struct typeid_expr_t : public item_impl_t<expression_t> {
+	struct typeid_expr_t : public std::enable_shared_from_this<typeid_expr_t>, public item_impl_t<expression_t> {
 		typedef ptr<const typeid_expr_t> ref;
 
 		virtual bound_var_t::ref resolve_expression(
@@ -147,9 +148,9 @@ namespace ast {
 		identifier::ref type_name;
 	};
 
-	struct callsite_expr_interface_t : public expression_t, public statement_t {};
+	struct callsite_expr_interface_t : public virtual expression_t, public virtual statement_t {};
 
-	struct callsite_expr_t : public item_impl_t<callsite_expr_interface_t> {
+	struct callsite_expr_t : public std::enable_shared_from_this<callsite_expr_t>, public item_impl_t<callsite_expr_interface_t> {
 		typedef ptr<const callsite_expr_t> ref;
 
 		static ref parse(parse_state_t &ps, ptr<const reference_expr_t> ref_expr);
@@ -170,7 +171,7 @@ namespace ast {
 		ptr<const param_list_t> params;
 	};
 
-	struct return_statement_t : public item_impl_t<statement_t> {
+	struct return_statement_t : public std::enable_shared_from_this<return_statement_t>, public item_impl_t<statement_t> {
 		typedef ptr<const return_statement_t> ref;
 
 		static ptr<const return_statement_t> parse(parse_state_t &ps);
@@ -202,7 +203,7 @@ namespace ast {
 				scope_t::ref scope,
 				life_t::ref life) const;
 
-		ptr<const expression_t> lhs;
+		ptr<const reference_expr_t> lhs;
 		token_t type_cast;
 		bool force_cast = false;
 	};
@@ -216,7 +217,7 @@ namespace ast {
 		identifier::ref type_name;
 	};
 
-	struct user_defined_type_t : public item_impl_t<item_t> {
+	struct user_defined_type_t : public item_t {
 		virtual ~user_defined_type_t() throw() {}
 
 		static ptr<const user_defined_type_t> parse(parse_state_t &ps);
@@ -224,9 +225,11 @@ namespace ast {
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref scope) const = 0;
+		virtual identifier::ref get_type_name() const = 0;
+		virtual types::type_t::ref get_type() const = 0;
 	};
 
-	struct polymorph_t : public user_defined_type_t {
+	struct polymorph_t : public item_impl_t<user_defined_type_t> {
 		typedef ptr<const polymorph_t> ref;
 
 		virtual ~polymorph_t() throw() {}
@@ -234,14 +237,14 @@ namespace ast {
 		virtual void register_type(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
-				identifier::ref supertype_id,
-				identifier::refs type_variables,
 				scope_t::ref scope) const;
+		virtual identifier::ref get_type_name() const;
+		virtual types::type_t::ref get_type() const;
 
 		identifier::set subtypes;
 	};
 
-	struct struct_t : public user_defined_type_t {
+	struct struct_t : public std::enable_shared_from_this<struct_t>, public item_impl_t<user_defined_type_t> {
 		typedef ptr<const struct_t> ref;
 
 		virtual ~struct_t() throw() {}
@@ -250,6 +253,8 @@ namespace ast {
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref scope) const;
+		virtual identifier::ref get_type_name() const;
+		virtual types::type_t::ref get_type() const;
 
 		std::vector<dimension_t::ref> dimensions;
 	};
@@ -319,17 +324,14 @@ namespace ast {
 		identifier::ref return_type_name;
 	};
 
-	struct function_defn_t : public item_impl_t<statement_t> {
+	struct function_defn_t : public std::enable_shared_from_this<function_defn_t>, public item_impl_t<item_t> {
 		typedef ptr<const function_defn_t> ref;
 
 		static ptr<const function_defn_t> parse(parse_state_t &ps);
-		virtual void resolve_statement(
+		virtual void resolve_function_defn(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
-				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				module_scope_t::ref scope) const;
 		bound_var_t::ref instantiate_with_args_and_return_type(
 				status_t &status,
 			   	llvm::IRBuilder<> &builder,
@@ -347,11 +349,13 @@ namespace ast {
 		typedef ptr<const if_block_t> ref;
 
 		static ptr<const if_block_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_expression(
+		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
-				life_t::ref life) const;
+				life_t::ref life,
+				local_scope_t::ref *new_scope,
+				bool *returns) const;
 
 		ptr<const reference_expr_t> condition;
 		ptr<const block_t> block;
@@ -360,7 +364,6 @@ namespace ast {
 
 	struct loop_block_t : public item_impl_t<statement_t> {
 		typedef ptr<const loop_block_t> ref;
-
 
 		static ptr<const loop_block_t> parse(parse_state_t &ps);
 		virtual void resolve_statement(
@@ -391,7 +394,7 @@ namespace ast {
 				refs::const_iterator end_iter,
 				ptr<const block_t> else_block) const;
 		
-		types::signature type_name;
+		identifier::ref get_type_name() const { return make_code_id(token); }
 		ptr<const block_t> block;
 	};
 
@@ -425,13 +428,10 @@ namespace ast {
 	struct link_module_statement_t : public item_impl_t<item_t> {
 		typedef ptr<const link_module_statement_t> ref;
 
-		virtual void resolve_statement(
+		void resolve_linked_module(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
-				scope_t::ref block_scope,
-				life_t::ref life,
-				local_scope_t::ref *new_scope,
-				bool *returns) const;
+				scope_t::ref scope) const;
 
 		ptr<const module_decl_t> extern_module;
 	};
@@ -440,7 +440,7 @@ namespace ast {
 		typedef ptr<const link_function_statement_t> ref;
 
 
-		virtual bound_var_t::ref resolve_linked_function(
+		bound_var_t::ref resolve_linked_function(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref scope) const;
@@ -451,7 +451,6 @@ namespace ast {
 
 	struct module_t : public std::enable_shared_from_this<module_t>, public item_impl_t<item_t> {
 		typedef ptr<const module_t> ref;
-
 
 		module_t(const atom filename);
 		static ptr<const module_t> parse(parse_state_t &ps);
@@ -467,7 +466,7 @@ namespace ast {
 		std::vector<ptr<const link_function_statement_t>> linked_functions;
 	};
 
-	struct program_t : public item_impl_t<item_t> {
+	struct program_t : public item_impl_t<> {
 		typedef ptr<const program_t> ref;
 
 		virtual ~program_t() {}
@@ -492,7 +491,7 @@ namespace ast {
 		virtual ~ref_expr_interface_t() = 0;
 	};
 
-	struct reference_expr_t : public item_impl_t<ref_expr_interface_t> {
+	struct reference_expr_t : public std::enable_shared_from_this<reference_expr_t>, public item_impl_t<ref_expr_interface_t> {
 		typedef ptr<const reference_expr_t> ref;
 
 		static ptr<const reference_expr_t> parse(parse_state_t &ps);
@@ -529,12 +528,12 @@ namespace ast {
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref scope,
-				life_t::ref life) const = 0;
+				life_t::ref life) const;
 
 		std::vector<ptr<const expression_t>> items;
 	};
 
-	struct array_index_expr_t : public item_impl_t<expression_t> {
+	struct array_index_expr_t : public std::enable_shared_from_this<array_index_expr_t>, public item_impl_t<expression_t> {
 		typedef ptr<const array_index_expr_t> ref;
 
 		static ptr<const expression_t> parse(parse_state_t &ps);

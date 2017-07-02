@@ -162,7 +162,7 @@ ptr<const sizeof_expr_t> sizeof_expr_t::parse(parse_state_t &ps) {
 	return sizeof_expr;
 }
 
-ptr<const expression_t> parse_cast_wrap(parse_state_t &ps, ptr<expression_t> expr) {
+ptr<const expression_t> parse_cast_wrap(parse_state_t &ps, ptr<reference_expr_t> expr) {
     if (ps.token.tk == tk_as) {
 		auto token = ps.token;
 		ps.advance();
@@ -400,11 +400,9 @@ ptr<const loop_block_t> loop_block_t::parse(parse_state_t &ps) {
 ptr<const pattern_block_t> pattern_block_t::parse(parse_state_t &ps) {
 	expect_token(tk_identifier);
 	auto type_token = ps.token;
-	types::signature type_name = type_token.text;
 	chomp_token(tk_colon);
 	chomp_token(tk_lcurly);
 	auto pattern_block = ast::create<ast::pattern_block_t>(type_token);
-	pattern_block->type_name = type_name;
 
 	auto block = block_t::parse(ps);
 	if (!!ps.status) {
@@ -658,9 +656,9 @@ ptr<const module_t> module_t::parse(parse_state_t &ps) {
 		// Get links
 		while (ps.token.tk == tk_link) {
 			auto link_statement = link_statement_parse(ps);
-			if (auto linked_module = dyncast<link_module_statement_t>(link_statement)) {
+			if (auto linked_module = dyncast<const link_module_statement_t>(link_statement)) {
 				module->linked_modules.push_back(linked_module);
-			} else if (auto linked_function = dyncast<link_function_statement_t>(link_statement)) {
+			} else if (auto linked_function = dyncast<const link_function_statement_t>(link_statement)) {
 				module->linked_functions.push_back(linked_function);
 			}
 		}
