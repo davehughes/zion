@@ -1,7 +1,6 @@
 #pragma once
 #include "zion.h"
 #include "ast_decls.h"
-#include "signature.h"
 #include "utils.h"
 #include "identifier.h"
 
@@ -26,8 +25,6 @@ bool is_managed_type_name(std::string type_name);
 namespace types {
 
 	typedef atom::map<int> name_index_t;
-
-	struct signature;
 
 	struct type_t : public std::enable_shared_from_this<type_t> {
 		typedef ptr<const type_t> ref;

@@ -148,7 +148,9 @@ namespace ast {
 		identifier::ref type_name;
 	};
 
-	struct callsite_expr_interface_t : public virtual expression_t, public virtual statement_t {};
+	struct callsite_expr_interface_t : public virtual expression_t, public virtual statement_t {
+		virtual ~callsite_expr_interface_t() {}
+	};
 
 	struct callsite_expr_t : public std::enable_shared_from_this<callsite_expr_t>, public item_impl_t<callsite_expr_interface_t> {
 		typedef ptr<const callsite_expr_t> ref;
@@ -488,7 +490,7 @@ namespace ast {
 	};
 
 	struct ref_expr_interface_t : public expression_t, public can_reference_overloads_t {
-		virtual ~ref_expr_interface_t() = 0;
+		virtual ~ref_expr_interface_t() {}
 	};
 
 	struct reference_expr_t : public std::enable_shared_from_this<reference_expr_t>, public item_impl_t<ref_expr_interface_t> {

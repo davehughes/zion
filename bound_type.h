@@ -7,7 +7,6 @@
 #include <map>
 #include "ast_decls.h"
 #include "types.h"
-#include "signature.h"
 
 struct bound_var_t;
 
@@ -16,11 +15,12 @@ struct bound_type_t {
 	typedef std::weak_ptr<const bound_type_t> weak_ref;
 	typedef std::vector<std::pair<atom, ref>> named_pairs;
 	typedef std::vector<ref> refs;
-	typedef std::map<types::signature, ref> map;
+	typedef std::map<atom, ref> map;
 	typedef atom::map<int> name_index;
 
 	bound_type_t(
 			types::type_t::ref type,
+			atom name,
 			location_t location,
 			llvm::Type *llvm_type,
 			llvm::Type *llvm_specific_type);
@@ -39,7 +39,8 @@ public:
 	bool is_maybe() const;
     bool is_managed() const;
     bool is_module() const;
-	types::signature get_signature() const;
+
+	atom get_name() const;
 
 	std::string str() const;
 	types::type_t::ref get_type() const;
@@ -52,13 +53,15 @@ public:
 
 	static ref create(
 			types::type_t::ref type,
+			atom name,
 			location_t location,
 			llvm::Type *llvm_type,
 			llvm::Type *llvm_specific_type = nullptr);
 
 private:
 	types::type_t::ref type;
-	const location_t location;
+	atom const name;
+	location_t const location;
 	llvm::Type * const llvm_type;
 	llvm::Type * const llvm_specific_type;
 };

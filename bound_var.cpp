@@ -136,10 +136,6 @@ bound_type_t::refs get_bound_types(bound_var_t::refs values) {
 	return types;
 }
 
-types::signature bound_var_t::get_signature() const {
-	return type->get_signature();
-}
-
 types::type_t::ref bound_var_t::get_type(ptr<scope_t> scope) const {
 	return type->get_type();
 }

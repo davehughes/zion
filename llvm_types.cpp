@@ -32,6 +32,7 @@ bound_type_t::refs upsert_bound_types(
 
 bound_type_t::ref create_ref_ptr_type(
 		llvm::IRBuilder<> &builder,
+		atom name,
 		types::type_ref_t::ref ref_type)
 {
 	debug_above(4, log(log_info, "creating ref type for %s",
@@ -44,6 +45,7 @@ bound_type_t::ref create_ref_ptr_type(
 
 	return bound_type_t::create(
 			ref_type,
+			name,
 			ref_type->get_location(),
 			llvm_type->getPointerTo());
 }
