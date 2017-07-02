@@ -3,7 +3,6 @@
 #include "assert.h"
 #include <sstream>
 
-void ensure_indented_line(bool &indented_line, int indent_level);
 
 std::string token_t::str() const {
 	std::stringstream ss;
@@ -96,8 +95,6 @@ token_kind_t translate_tk(token_kind_t tk, const zion_string_t &token_text) {
 
 void token_t::emit(int &indent_level, token_kind_t &last_tk, bool &indented_line) {
 	/* Pretty print this token in a stream. */
-	ensure_indented_line(indented_line, indent_level);
-
 	switch (tk) {
 	case tk_none:
 		assert(false);

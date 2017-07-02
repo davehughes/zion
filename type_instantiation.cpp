@@ -93,73 +93,13 @@ bound_var_t::ref bind_ctor_to_scope(
 	return nullptr;
 }
 
-void get_generics_and_lambda_vars(
-		status_t &status,
-	   	types::type_t::ref subtype,
-		identifier::refs type_variables,
-	   	scope_t::ref scope,
-		std::list<identifier::ref> &lambda_vars,
-		atom::set &generics)
-{
-	assert(generics.size() == 0);
-	assert(lambda_vars.size() == 0);
-	debug_above(5, log(log_info, "get_generics_and_lambda_vars(%s, %s)",
-				subtype->str().c_str(),
-				::str(type_variables).c_str()));
-
-	/* create a type that takes the used type variables in the data ctor and
-	 * returns placement in given type variable order */
-	/* instantiate the necessary components of a data ctor */
-	generics = to_atom_set(type_variables);
-
-	/* ensure that there are no duplicate type variables */
-	if (generics.size() != type_variables.size()) {
-		/* this is a fail because there are some reused type variables, find
-		 * them and report on them */
-		atom::set seen;
-		for (auto type_variable : type_variables) {
-			atom name = type_variable->get_name();
-			if (seen.find(name) == seen.end()) {
-				seen.insert(name);
-			} else {
-				user_error(status, type_variable->get_location(),
-						"found duplicate type variable " c_id("%s"),
-						name.c_str());
-			}
-		}
-	} else {
-		debug_above(5, log(log_info,
-				   	"getting lambda_vars for value type %s",
-					subtype->str().c_str()));
-
-		/* if any of the type names are actually inbound type variables, take
-		 * note of the order they are mentioned. tell us how to create the
-		 * lambda we'll place into the type environment to represent the fact
-		 * that this data ctor is a subtype of the supertype. and, tell us which
-		 * types are parametrically bound to this subtype, and which are still
-		 * quantified */
-
-		atom::set unbound_vars = subtype->get_ftvs();
-		for (auto type_var : type_variables) {
-			if (in(type_var->get_name(), unbound_vars)) {
-				/* this variable is referenced by the current data ctor (the
-				 * subtype), therefore it has opinions about its role in the
-				 * supertype */
-				lambda_vars.push_front(type_var);
-			}
-		}
-	}
-}
-
 types::type_t::ref instantiate_data_ctor_type(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		types::type_t::ref unbound_type,
-		identifier::refs type_variables,
 		scope_t::ref scope,
 		ptr<const ast::item_t> node,
-		identifier::ref id,
-		identifier::ref supertype_id)
+		identifier::ref id)
 {
 	/* get the name of the ctor */
 	atom tag_name = id->get_name();
@@ -172,18 +112,6 @@ types::type_t::ref instantiate_data_ctor_type(
 	/* create the basic struct type */
 	ptr<const types::type_struct_t> struct_ = dyncast<const types::type_struct_t>(unbound_type);
 	assert(struct_ != nullptr);
-
-	/* lambda_vars tracks the order of the lambda variables we'll accept as we abstract our
-	 * supertype expansion */
-	std::list<identifier::ref> lambda_vars;
-	atom::set generics;
-
-	get_generics_and_lambda_vars(status, struct_, type_variables, scope,
-			lambda_vars, generics);
-
-	if (!status) {
-		return nullptr;
-	}
 
 	/* now build the actual typename expansion we'll put in the typename env */
 	/**********************************************/
@@ -199,17 +127,7 @@ types::type_t::ref instantiate_data_ctor_type(
 
 			/* create the actual expanded type signature of this type */
 			types::type_t::ref type = type_ref(struct_);
-
-			/* make sure we allow for parameterized expansion */
-			for (auto lambda_var : lambda_vars) {
-				type = type_lambda(lambda_var, type);
-			}
-
-			/* let's create the return type (an unexpanded operator) that will be the codomain of the ctor fn. */
 			auto ctor_return_type = tag_type;
-			for (auto lambda_var_iter = lambda_vars.rbegin(); lambda_var_iter != lambda_vars.rend(); ++lambda_var_iter) {
-				ctor_return_type = type_operator(ctor_return_type, type_variable(*lambda_var_iter));
-			}
 
 			/* for now assume all ctors return refs */
 			debug_above(4, log(log_info, "return type for %s will be %s",
@@ -224,11 +142,10 @@ types::type_t::ref instantiate_data_ctor_type(
 					ctor_return_type);
 
 			module_scope->get_program_scope()->put_unchecked_variable(tag_name,
-					unchecked_data_ctor_t::create(id, node,
-						module_scope, data_ctor_sig));
+					unchecked_data_ctor_t::create(id, node, module_scope, data_ctor_sig));
 			return type;
 		} else {
-			user_error(status, node->token.location, "local type definitions are not yet impl");
+			user_error(status, node->get_location(), "local type definitions are not yet impl");
 		}
 	} else {
 		// This should not happen...
@@ -239,48 +156,48 @@ types::type_t::ref instantiate_data_ctor_type(
 	return nullptr;
 }
 
-void ast::type_product_t::register_type(
+void ast::struct_t::register_type(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
-		identifier::ref id_,
-		identifier::refs type_variables,
 		scope_t::ref scope) const
 {
 	debug_above(5, log(log_info, "creating product type for %s", str().c_str()));
 
-	atom name = id_->get_name();
-	auto location = id_->get_location();
+	auto type_name = get_type_name();
 
-	if (auto found_type = scope->get_bound_type(id_->get_name())) {
+	if (auto found_type = scope->get_bound_type(type_name->get_name())) {
 		/* simple check for an already bound monotype */
-		user_error(status, location, "symbol " c_id("%s") " was already defined",
-				name.c_str());
+		user_error(status, get_location(),
+			   	"symbol " c_id("%s") " was already defined",
+				type_name->get_name().c_str());
 		user_message(log_warning, status, found_type->get_location(),
 				"previous version of %s defined here",
 				found_type->str().c_str());
 	} else {
 		auto env = scope->get_typename_env();
-		auto env_iter = env.find(name);
+		auto env_iter = env.find(type_name->get_name());
 		if (env_iter == env.end()) {
 			/* instantiate_data_ctor_type has the side-effect of creating an
 			 * unchecked data ctor for the type */
-			auto data_ctor_type = instantiate_data_ctor_type(status, builder, type,
-					type_variables, scope, shared_from_this(), id_, nullptr);
+			auto data_ctor_type = instantiate_data_ctor_type(status, builder,
+					get_type(), scope, shared_from_this(),
+					type_name);
 
 			if (!!status) {
 				/* register the typename in the current environment */
+				auto qualified_type_name = scope->make_fqn(type_name->get_name().str());
 				debug_above(7, log(log_info, "registering type " c_type("%s") " in scope %s",
-							name.c_str(), scope->get_name().c_str()));
-				scope->put_typename(status, scope->make_fqn(name.str()), data_ctor_type);
+							qualified_type_name.c_str(), scope->get_name().c_str()));
+				scope->put_typename(status, qualified_type_name, data_ctor_type);
 
 				/* success */
 				return;
 			}
 		} else {
 			/* simple check for an already bound typename env variable */
-			user_error(status, location,
+			user_error(status, type_name->get_location(),
 					"symbol " c_id("%s") " is already taken in typename env by %s",
-					name.c_str(),
+					type_name->get_name().c_str(),
 					env_iter->second->str().c_str());
 		}
 	}
@@ -288,16 +205,14 @@ void ast::type_product_t::register_type(
 	assert(!status);
 }
 
-void ast::type_sum_t::register_type(
+void ast::polymorph_t::register_type(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
-		identifier::ref id,
-		identifier::refs type_variables,
 		scope_t::ref scope) const
 {
-	debug_above(3, log(log_info, "creating subtypes to %s with type variables [%s]",
-				token.text.c_str(),
-				join(type_variables, ", ").c_str()));
+	debug_above(3, log(log_info, "creating subtypes to %s", token.text.c_str()));
 
-	scope->put_typename(status, scope->make_fqn(id->get_name().str()), type);
+	scope->put_typename(status,
+		   	scope->make_fqn(get_type_name()->get_name().str()),
+		   	get_type());
 }

@@ -9,6 +9,10 @@
 static std::unordered_map<std::string, int> atom_str_index = {{"", 0}};
 static std::vector<std::string> atoms = {""};
 
+void init_atoms() {
+	atoms.reserve(5*1024);
+}
+
 int memoize_atom(std::string &&str) {
 	auto iter = atom_str_index.find(str);
 	if (iter != atom_str_index.end()) {

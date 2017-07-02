@@ -19,6 +19,15 @@ unification_t::unification_t(
 				::str(bindings).c_str()));
 }
 
+bool get_type_variable_name(types::type_t::ref type, atom &name) {
+	if (auto ptv = dyncast<const types::type_variable_t>(type)) {
+		name = ptv->id->get_name();
+		return true;
+	} else {
+		return false;
+	}
+}
+
 types::type_t::ref prune(types::type_t::ref t, types::type_t::map bindings) {
 	/* Follow the links across the bindings to reach the final binding. */
 	atom type_variable_name;
@@ -210,14 +219,6 @@ unification_t unify(
 		}
 	} else if (ptf_a != nullptr) {
 		if (auto ptf_b = dyncast<const types::type_function_t>(b)) {
-			/* note that the context unification is contravariant to the rest */
-			auto context_unification = unify(ptf_b->inbound_context, ptf_a->inbound_context,
-					env, bindings, depth + 1);
-			if (!context_unification.result) {
-				return {false, context_unification.reasons, {}};
-			}
-			bindings = context_unification.bindings;
-
 			/* now make sure the arguments unify */
 			auto args_unification = unify(ptf_a->args, ptf_b->args,
 					env, bindings, depth + 1);

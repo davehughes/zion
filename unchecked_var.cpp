@@ -28,50 +28,21 @@ types::type_t::ref unchecked_var_t::get_type(scope_t::ref scope) const {
 		auto decl = fn->decl;
 		assert(decl != nullptr);
 
-		if (decl->param_list_decl != nullptr) {
-			/* this is a function declaration, so let's set up our output parameters */
-			types::type_t::refs args;
-
-			/* get the parameters */
-			auto &params = decl->param_list_decl->params;
-			for (auto &param : params) {
-				if (param->type == nullptr) {
-					args.push_back(type_variable(param->get_location()));
-				} else {
-					args.push_back(param->type);
-				}
-			}
-
-			if (!!status) {
-				/* figure out the return type */
-				if (decl->return_type != nullptr) {
-					/* get the return type */
-					types::type_function_t::ref sig = type_function(
-							inbound_context,
-							type_args(args),
-							decl->return_type);
-
-					debug_above(9, log(log_info, "found unchecked type for %s : %s",
-								decl->token.str().c_str(),
-								sig->str().c_str()));
-					return sig;
-				} else {
-					types::type_function_t::ref sig = type_function(
-							inbound_context,
-							type_args(args),
-							/* default to void, which is fully bound */
-							type_void());
-
-					debug_above(4, log(log_info, "defaulting return type of %s to void : %s",
-								decl->token.str().c_str(),
-								sig->str().c_str()));
-					return sig;
-				}
-			}
-		} else {
-			panic("function declaration has no parameter list");
-			return type_unreachable();
+		/* this is a function declaration, so let's set up our output parameters */
+		identifier::refs args;
+		for (auto &param : decl->params) {
+			args.push_back(param->type_name);
 		}
+
+		/* get the return type */
+		types::type_function_t::ref sig = type_function(
+				type_args(args),
+				type_id(decl->return_type_name));
+
+		debug_above(9, log(log_info, "found unchecked type for %s : %s",
+					decl->token.str().c_str(),
+					sig->str().c_str()));
+		return sig;
 	} else {
 		log(log_warning, "not-impl: get a type from unchecked_var %s", node->str().c_str());
 		not_impl();
@@ -84,5 +55,5 @@ types::type_t::ref unchecked_var_t::get_type(scope_t::ref scope) const {
 }
 
 location_t unchecked_var_t::get_location() const {
-	return node->token.location;
+	return node->get_location();
 }

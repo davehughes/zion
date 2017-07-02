@@ -44,8 +44,6 @@ unification_t var_t::accepts_callsite(
 				"checking whether %s accepts %s", str().c_str(),
 				args->str().c_str()));
 
-	auto bindings = scope->get_type_variable_bindings();
-
 	/* consider allowing the caller to invoke from a different context
 	 * deliberately in order to claim access to a separate module's context */
 	auto u = unify(

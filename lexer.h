@@ -23,4 +23,4 @@ private:
 	int            m_line=1, m_col=1;
 };
 
-token_kind_t translate_lltk(token_kind_t tk, const zion_string_t &token_text);
+token_kind_t translate_tk(token_kind_t tk, const zion_string_t &token_text);

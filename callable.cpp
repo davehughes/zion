@@ -145,7 +145,7 @@ bound_var_t::ref get_callable(
 			return callable;
 		} else {
 			if (fns.size() == 0) {
-				user_error(status, *callsite, "no function found named " c_id("%s") " for callsite %s with %s in " c_id("%s"),
+				user_error(status, callsite, "no function found named " c_id("%s") " for callsite %s with %s in " c_id("%s"),
 						alias.c_str(), callsite->str().c_str(),
 						args->str().c_str(),
 						scope->get_name().c_str());
@@ -154,7 +154,7 @@ bound_var_t::ref get_callable(
 				std::stringstream ss;
 				ss << "unable to resolve overloads for " << C_ID << alias << C_RESET;
 				ss << " at " << callsite->str() << args->str();
-				user_error(status, *callsite, "%s", ss.str().c_str());
+				user_error(status, callsite, "%s", ss.str().c_str());
 
 				if (debug_level() >= 0) {
 					/* report on the places we tried to look for a match */
