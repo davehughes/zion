@@ -82,6 +82,7 @@ bool lexer_t::get_token(
 		gts_comment,
 	};
 
+l_begin:
 	gt_state gts = gts_start;
 	bool scan_ahead = true;
 
@@ -364,14 +365,19 @@ bool lexer_t::get_token(
 						tkstr(tk), token_text.c_str()));
 
 			token = token_t({m_filename, line, col}, tk, token_text.str());
-		}
 
-		if (ch == EOF) {
+			if (token.tk == tk_comment) {
+				if (comments != nullptr) {
+					comments->push_back(token);
+					goto l_begin;
+				}
+			}
+
+			return true;
+		} else if (ch == EOF) {
 			token = token_t({m_filename, line, col}, tk_none, token_text.str());
 			return false;
 		}
-
-		return true;
 	}
 
 	return false;
