@@ -45,7 +45,6 @@ bound_type_t::ref create_ref_ptr_type(
 
 	return bound_type_t::create(
 			ref_type,
-			name,
 			ref_type->get_location(),
 			llvm_type->getPointerTo());
 }
@@ -468,6 +467,37 @@ bound_type_t::ref create_bound_function_type(
 		}
 	}
 
+	assert(!status);
+	return nullptr;
+}
+ 
+bound_type_t::ref upsert_bound_type(
+               status_t &status,
+               llvm::IRBuilder<> &builder,
+               ptr<scope_t> scope,
+               types::type_t::ref type)
+{
+	if (!!status) {
+		auto signature = type->get_signature();
+		auto bound_type = scope->get_bound_type(signature);
+		if (bound_type != nullptr) {
+			/* this case is critical for breaking cycles during structure
+			 * instantiation */
+			return bound_type;
+		} else {
+			/* we believe that this type does not exist. let's build it */
+			bound_type = create_bound_type(status, builder, scope, type);
+
+			if (!!status) {
+				return bound_type;
+			}
+
+			user_error(status, type->get_location(),
+					"unable to find a definition for %s in scope " c_id("%s"),
+					type->str().c_str(),
+					scope->get_name().c_str());
+		}
+	}
 	assert(!status);
 	return nullptr;
 }

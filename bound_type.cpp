@@ -11,12 +11,10 @@
 
 bound_type_t::bound_type_t(
 		types::type_t::ref type,
-		atom name,
 		location_t location,
 		llvm::Type *llvm_type,
 		llvm::Type *llvm_specific_type) :
 	type(type),
-	name(name),
 	location(location),
 	llvm_type(llvm_type),
 	llvm_specific_type(llvm_specific_type)
@@ -102,13 +100,8 @@ std::ostream &operator <<(std::ostream &os, const bound_type_t &type) {
 	return os << type.str();
 }
 
-atom bound_type_t::get_name() const {
-	return type_name;
-}
-
 std::string bound_type_t::str() const {
 	std::stringstream ss;
-	ss << "type " << get_name().str() << " = ";
 	ss << get_type();
 #ifdef DEBUG_LLVM_TYPES
 	ss << " " << llvm_print(get_llvm_specific_type());

@@ -52,7 +52,7 @@ bound_type_t::ref get_bound_type_from_scope(
 		program_scope_t::ref program_scope)
 {
 	indent_logger indent(8, string_format("checking whether %s is bound...",
-				type_name->get_name().c_str()));
+				type->str().c_str()));
 	auto bound_type = program_scope->get_bound_type(type_name);
 	if (bound_type != nullptr) {
 		debug_above(8, log(log_info, "yep. %s is bound to %s",

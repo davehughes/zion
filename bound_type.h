@@ -20,7 +20,6 @@ struct bound_type_t {
 
 	bound_type_t(
 			types::type_t::ref type,
-			atom name,
 			location_t location,
 			llvm::Type *llvm_type,
 			llvm::Type *llvm_specific_type);
@@ -53,14 +52,12 @@ public:
 
 	static ref create(
 			types::type_t::ref type,
-			atom name,
 			location_t location,
 			llvm::Type *llvm_type,
 			llvm::Type *llvm_specific_type = nullptr);
 
 private:
 	types::type_t::ref type;
-	atom const name;
 	location_t const location;
 	llvm::Type * const llvm_type;
 	llvm::Type * const llvm_specific_type;
