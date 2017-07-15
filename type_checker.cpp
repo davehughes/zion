@@ -595,6 +595,15 @@ bound_var_t::ref ast::link_function_statement_t::resolve_linked_function(
 	return nullptr;
 }
 
+bound_var_t::ref ast::callsite_expr_t::resolve_expression(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		scope_t::ref scope,
+		life_t::ref life) const
+{
+	return null_impl();
+}
+
 void ast::callsite_expr_t::resolve_statement(
 		status_t &status,
 		llvm::IRBuilder<> &builder,

@@ -66,4 +66,20 @@ namespace ast {
         return initializer->resolve_expression(
 				status, builder, scope, life);
     }
+
+	identifier::ref struct_t::get_type_name() const {
+		return make_code_id(token);
+	}
+
+	types::type_t::ref struct_t::get_type() const {
+		return null_impl();
+	}
+
+	identifier::ref polymorph_t::get_type_name() const {
+		return make_code_id(token);
+	}
+
+	types::type_t::ref polymorph_t::get_type() const {
+		return null_impl();
+	}
 }

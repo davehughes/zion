@@ -13,7 +13,7 @@ namespace types {
 		const atom name;
 
 		signature(const signature &sig);
-		signature(std::string sig);
+		// signature(std::string sig);
 		signature(const token_t &rhs);
 		signature(const char *name);
 		signature(const atom name);

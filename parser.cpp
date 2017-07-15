@@ -397,6 +397,31 @@ ptr<const loop_block_t> loop_block_t::parse(parse_state_t &ps) {
 	return nullptr;
 }
 
+ptr<const match_block_t> match_block_t::parse(parse_state_t &ps) {
+	auto match_block = create<ast::match_block_t>(ps.token);
+	chomp_token(tk_match);
+	match_block->value = reference_expr_t::parse(ps);
+	if (!!ps.status) {
+		chomp_token(tk_lcurly);
+		while (ps.token.tk == tk_identifier) {
+			auto pattern_block = pattern_block_t::parse(ps);
+			if (!!ps.status) {
+				match_block->pattern_blocks.push_back(pattern_block);
+			} else {
+				break;
+			}
+		}
+		chomp_token(tk_rcurly);
+	}
+
+	if (!!ps.status) {
+		return match_block;
+	}
+
+	assert(!ps.status);
+	return nullptr;
+}
+
 ptr<const pattern_block_t> pattern_block_t::parse(parse_state_t &ps) {
 	expect_token(tk_identifier);
 	auto type_token = ps.token;
