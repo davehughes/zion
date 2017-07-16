@@ -4,6 +4,7 @@
 #include <memory>
 #include <sstream>
 #include "parse_state.h"
+#include "types.h"
 
 template <typename T, typename... Args>
 ptr<T> parse_text(std::istream &is, std::string filename = "repl.llz") {
@@ -25,3 +26,5 @@ ptr<T> parse_text(const std::string &text, std::string filename = "repl.llz") {
 	std::istringstream iss(text);
 	return parse_text<T>(iss, filename);
 }
+
+types::type_t::ref parse_type_ref(parse_state_t &ps);

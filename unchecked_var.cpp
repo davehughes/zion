@@ -29,15 +29,15 @@ types::type_t::ref unchecked_var_t::get_type(scope_t::ref scope) const {
 		assert(decl != nullptr);
 
 		/* this is a function declaration, so let's set up our output parameters */
-		identifier::refs args;
+		types::type_t::refs args;
 		for (auto &param : decl->params) {
-			args.push_back(param->type_name);
+			args.push_back(param->type);
 		}
 
 		/* get the return type */
 		types::type_function_t::ref sig = type_function(
 				type_args(args),
-				type_id(decl->return_type_name));
+				decl->return_type);
 
 		debug_above(9, log(log_info, "found unchecked type for %s : %s",
 					decl->token.str().c_str(),

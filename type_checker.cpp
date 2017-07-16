@@ -36,12 +36,12 @@ bound_type_t::ref get_fully_bound_dimension(
 		/* get the name of this parameter */
 		var_name = obj->token.text;
 
-		assert(obj->type_name->get_name().size() != 0);
+		assert(obj->type != nullptr);
 
 		/* the user specified a type */
 		debug_above(6, log(log_info, "upserting type for param %s",
-					obj->type_name->str().c_str()));
-		return upsert_bound_type(status, builder, scope, obj->type_name);
+					obj->type->str().c_str()));
+		return upsert_bound_type(status, builder, scope, obj->type);
 	}
 
 	assert(!status);
@@ -403,7 +403,7 @@ void type_check_fully_bound_function_decl(
 	get_fully_bound_dimensions(status, builder, scope, obj.params, params);
 
 	if (!!status) {
-		return_type = upsert_bound_type(status, builder, scope, obj.return_type_name);
+		return_type = upsert_bound_type(status, builder, scope, obj.return_type);
 
 		/* we got the params, and the return value */
 		return;
@@ -1208,14 +1208,14 @@ bound_var_t::ref ast::sizeof_expr_t::resolve_expression(
 		life_t::ref life) const
 {
 	/* calculate the size of the object being referenced assume native types */
-	bound_type_t::ref bound_type = upsert_bound_type(status, builder, scope, type_name);
+	bound_type_t::ref bound_type = upsert_bound_type(status, builder, scope, type);
 	bound_type_t::ref size_type = scope->get_program_scope()->get_bound_type({INT_TYPE});
 	if (!!status) {
 		llvm::Value *llvm_size = llvm_sizeof_type(builder,
 				llvm_deref_type(bound_type->get_llvm_specific_type()));
 
 		return bound_var_t::create(
-				INTERNAL_LOC(), type_name->get_name().str(), size_type, llvm_size,
+				INTERNAL_LOC(), type->str(), size_type, llvm_size,
 				make_iid("sizeof"), false /*is_lhs*/, false /*is_global*/);
 	}
 

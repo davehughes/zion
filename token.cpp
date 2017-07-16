@@ -66,16 +66,18 @@ token_kind_t translate_tk(token_kind_t tk, const zion_string_t &token_text) {
 	};
 
 	static const auto token_matchers = std::vector<token_matcher>{
+		{"as", tk_as},
 		{"break", tk_break},
 		{"const", tk_const},
 		{"continue", tk_continue},
 		{"else", tk_else},
 		{"fn", tk_fn},
-		{"as", tk_as},
 		{"if", tk_if},
 		{"line", tk_line},
+		{"link", tk_link},
 		{"loop", tk_loop},
 		{"match", tk_match},
+		{"module", tk_module},
 		{"polymorph", tk_polymorph},
 		{"return", tk_return},
 		{"struct", tk_struct},

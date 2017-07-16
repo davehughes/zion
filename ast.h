@@ -24,7 +24,7 @@ namespace ast {
 
 		virtual void set_token(const token_t &token) = 0;
 		virtual token_t get_token() const = 0;
-		virtual std::string str() const { assert(false); return "CODE"; }
+		virtual std::string str() const { return get_token().str(); }
 	};
 
 	template <typename T=item_t>
@@ -145,7 +145,7 @@ namespace ast {
 				life_t::ref life) const;
 		static ptr<const sizeof_expr_t> parse(parse_state_t &ps);
 
-		identifier::ref type_name;
+		types::type_t::ref type;
 	};
 
 	struct callsite_expr_interface_t : public virtual expression_t, public virtual statement_t {
@@ -216,7 +216,7 @@ namespace ast {
 
 		static ref parse(parse_state_t &ps);
 
-		identifier::ref type_name;
+		types::type_t::ref type;
 	};
 
 	struct user_defined_type_t : public item_impl_t<item_t> {
@@ -323,7 +323,7 @@ namespace ast {
 		static ptr<const function_decl_t> parse(parse_state_t &ps);
 
 		std::vector<dimension_t::ref> params;
-		identifier::ref return_type_name;
+		types::type_t::ref return_type;
 	};
 
 	struct function_defn_t : public std::enable_shared_from_this<function_defn_t>, public item_impl_t<item_t> {

@@ -157,7 +157,7 @@ ptr<const sizeof_expr_t> sizeof_expr_t::parse(parse_state_t &ps) {
 	chomp_token(tk_lparen);
 	expect_token(tk_identifier);
 	auto sizeof_expr = ast::create<sizeof_expr_t>(callsite_token);
-	sizeof_expr->type_name = make_code_id(ps.token);
+	sizeof_expr->type = parse_type_ref(ps);
 	chomp_token(tk_rparen);
 	return sizeof_expr;
 }
@@ -332,6 +332,7 @@ ptr<const param_list_t> param_list_t::parse(parse_state_t &ps) {
 
 ptr<const block_t> block_t::parse(parse_state_t &ps) {
 	auto block = create<ast::block_t>(ps.token);
+	auto block_start_token = ps.token;
 	chomp_token(tk_lcurly);
 	if (ps.token.tk == tk_rcurly) {
 		ps.error("empty blocks are not allowed, sorry. use pass.");
@@ -344,6 +345,7 @@ ptr<const block_t> block_t::parse(parse_state_t &ps) {
 			block->statements.push_back(std::move(statement));
 		} else {
 			assert(!ps.status);
+			user_error(ps.status, block_start_token.location, "while parsing this block");
 			return nullptr;
 		}
 	}
@@ -363,7 +365,7 @@ ptr<const if_block_t> if_block_t::parse(parse_state_t &ps) {
 	}
 
 	auto condition = reference_expr_t::parse(ps);
-	if (!ps.status) {
+	if (!!ps.status) {
 		if_block->condition = condition;
 		auto block = block_t::parse(ps);
 		if (!!ps.status) {
@@ -373,7 +375,19 @@ ptr<const if_block_t> if_block_t::parse(parse_state_t &ps) {
 				/* check the successive instructions for elif or else */
 				if (ps.token.tk == tk_else) {
 					ps.advance();
+					if (ps.token.tk == tk_lcurly) {
 					if_block->else_ = block_t::parse(ps);
+					} else if (ps.token.tk == tk_if) {
+						auto else_token = ps.token;
+						auto if_stmt = if_block_t::parse(ps);
+						if (!!ps.status) {
+							auto else_block = ast::create<block_t>(else_token);
+							else_block->statements.push_back(if_stmt);
+							if_block->else_ = else_block;
+						}
+					} else {
+						ps.error("expected " c_control("if") " or " c_control("{") " after " c_control("else"));
+					}
 				}
 			}
 
@@ -451,13 +465,13 @@ ptr<const function_decl_t> function_decl_t::parse(parse_state_t &ps) {
 
 	while (!!ps.status && ps.token.tk != tk_rparen) {
 		auto dimension = dimension_t::parse(ps);
-		if (!ps.status) {
+		if (!!ps.status) {
 			function_decl->params.push_back(dimension);
 			if (ps.token.tk == tk_comma) {
 				eat_token();
 				continue;
 			} else {
-				expect_token(tk_rparen);
+				chomp_token(tk_rparen);
 				break;
 			}
 		}
@@ -465,7 +479,7 @@ ptr<const function_decl_t> function_decl_t::parse(parse_state_t &ps) {
 
 	if (!!ps.status) {
 		expect_token(tk_identifier);
-		function_decl->return_type_name = make_code_id(ps.token);
+		function_decl->return_type = parse_type_ref(ps);
 
 		return function_decl;
 	}
@@ -656,13 +670,23 @@ struct_t::ref struct_t::parse(parse_state_t &ps, token_t type_name) {
 	return nullptr;
 }
 
+types::type_t::ref parse_type_ref(parse_state_t &ps) {
+	if (ps.token.tk == tk_identifier) {
+		auto token = ps.token;
+		ps.advance();
+		return type_id(make_code_id(token));
+	} else {
+		ps.error("invalid type: cannot begin a type with %s", ps.token.text.c_str());
+		return null_impl();
+	}
+}
+
 dimension_t::ref dimension_t::parse(parse_state_t &ps) {
 	expect_token(tk_identifier);
 	token_t var_name = ps.token;
 	ps.advance();
-	expect_token(tk_identifier);
 	auto dimension = ast::create<dimension_t>(var_name);
-	dimension->type_name = make_code_id(ps.token);
+	dimension->type = parse_type_ref(ps);
 	return dimension;
 }
 

@@ -78,7 +78,6 @@ bool lexer_t::get_token(
 		gts_float_symbol,
 		gts_expon,
 		gts_expon_symbol,
-		gts_eq,
 		gts_comment,
 	};
 
@@ -150,7 +149,7 @@ l_begin:
 				break;
 			case '=':
 				tk = tk_assign;
-				gts = gts_eq;
+				gts = gts_end;
 				break;
 			case '\'':
 				gts = gts_single_quoted;
@@ -218,14 +217,6 @@ l_begin:
 						gts = gts_error;
 					}
 				}
-			}
-			break;
-		case gts_eq:
-			gts = gts_end;
-			if (ch == '=') {
-				tk = tk_assign;
-			} else {
-				scan_ahead = false;
 			}
 			break;
 		case gts_float_symbol:

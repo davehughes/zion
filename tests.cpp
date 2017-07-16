@@ -202,7 +202,9 @@ bool test_lex_syntax() {
 	lexer_tests tests = {
 		{"retur note", {tk_identifier, tk_identifier}},
 		{"return note not", {tk_return, tk_identifier, tk_identifier}},
-		{"return var = == pass.pass..", {tk_return, tk_var, tk_assign, tk_identifier, tk_dot, tk_identifier}},
+		{"return var = == pass.pass..",
+		   	{tk_return, tk_var, tk_assign, tk_assign, tk_assign,
+			   	tk_identifier, tk_dot, tk_identifier, tk_dot, tk_dot}},
 		{"nil", {tk_identifier}},
 		{"loop", {tk_loop}},
 		{"if", {tk_if}},
@@ -214,7 +216,7 @@ bool test_lex_syntax() {
 		{"loop {\n\tfoo()}", {tk_loop, tk_lcurly, tk_identifier, tk_lparen, tk_rparen, tk_rcurly}},
 		{"true false", {tk_identifier, tk_identifier}},
 		{" nothing", {tk_identifier}},
-		{"? + - * / %", {tk_question, tk_star}},
+		{"? *", {tk_question, tk_star}},
 	};
 	return lexer_test(tests);
 }
@@ -298,7 +300,7 @@ bool check_parse(std::string text, std::string filename = test_module_name) {
 	}
 
 	/* make sure we can print back the code without crashing */
-	log(log_info, "\n%s", result->str().c_str());
+	log(log_info, "\n%s", result->get_token().str().c_str());
 	return true;
 }
 
@@ -373,7 +375,7 @@ bool test_parse_prefix_expression_not() {
 }
 
 bool test_parse_empty_quote() {
-	return check_parse<ast::statement_t>("\"\"", "\"\"");
+	return check_parse<ast::expression_t>("\"\"", "\"\"");
 }
 
 bool test_parse_link_extern_module_with_link_as() {
