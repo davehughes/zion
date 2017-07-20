@@ -149,7 +149,7 @@ type list{T} has
 ```
 
 The bool and list types are declared in the standard library exactly as depicted
-above. See `lib/std.zion`.
+above. See `lib/std.llz`.
 
 When a call to a function that takes a sum type unifies and there are still
 non-unified type terms, they will be substituted with the "unreachable" type

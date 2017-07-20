@@ -511,6 +511,20 @@ namespace ast {
 				const bound_type_t::refs &args) const;
 	};
 
+	struct reference_path_expr_t : public item_impl_t<expression_t> {
+		typedef ptr<const reference_path_expr_t> ref;
+
+		static ptr<const expression_t> parse(parse_state_t &ps);
+		virtual bound_var_t::ref resolve_expression(
+				status_t &status,
+				llvm::IRBuilder<> &builder,
+				scope_t::ref block_scope,
+				life_t::ref life) const;
+
+		reference_expr_t::ref root;
+		std::vector<identifier::ref> path;
+	};
+
 	struct literal_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const literal_expr_t> ref;
 

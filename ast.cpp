@@ -28,7 +28,7 @@ namespace ast {
 	}
 
 	std::string module_decl_t::get_canonical_name() const {
-		static std::string ext = ".zion";
+		static std::string ext = ".llz";
 		if (name.text == "_") {
 			/* this name is too generic, let's use the leaf filename */
 			std::string filename = name.location.filename.str();

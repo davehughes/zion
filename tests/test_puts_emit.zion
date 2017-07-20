@@ -1,7 +1,0 @@
-module _
-# test: pass
-link module posix
-
-def main()
-	posix.puts("Hello world."r)
-	

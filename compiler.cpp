@@ -15,9 +15,9 @@
 #include <iostream>
 
 std::string strip_zion_extension(std::string module_name) {
-	if (ends_with(module_name, ".zion")) {
+	if (ends_with(module_name, ".llz")) {
 		/* as a courtesy, strip the extension from the filename here */
-		return module_name.substr(0, module_name.size() - strlen(".zion"));
+		return module_name.substr(0, module_name.size() - strlen(".llz"));
 	} else {
 		return module_name;
 	}
@@ -74,8 +74,8 @@ void compiler_t::resolve_module_filename(
 	std::string filename_test_resolution;
 	if (real_path(name, filename_test_resolution)) {
 		if (name == filename_test_resolution) {
-			if (!ends_with(filename_test_resolution, ".zion")) {
-				filename_test_resolution = filename_test_resolution + ".zion";
+			if (!ends_with(filename_test_resolution, ".llz")) {
+				filename_test_resolution = filename_test_resolution + ".llz";
 			}
 
 			if (file_exists(filename_test_resolution)) {
@@ -88,7 +88,7 @@ void compiler_t::resolve_module_filename(
 		}
 	}
 
-	std::string leaf_name = name + ".zion";
+	std::string leaf_name = name + ".llz";
 	std::string working_resolution;
 	for (auto zion_path : *zion_paths) {
 		auto test_path = zion_path + "/" + leaf_name;
@@ -126,7 +126,7 @@ void compiler_t::resolve_module_filename(
 		resolved = working_resolution;
 		return;
 	} else {
-		user_error(status, location, "module not found: " c_error("`%s`") " (Note that module names should not have .zion extensions.) Looked in ZION_PATH=[%s]",
+		user_error(status, location, "module not found: " c_error("`%s`") " (Note that module names should not have .llz extensions.) Looked in ZION_PATH=[%s]",
 				name.c_str(),
 				join(*zion_paths, ":").c_str());
 	}
@@ -160,7 +160,7 @@ ast::module_t::ref compiler_t::build_parse(
 			if (existing_module == nullptr) {
 				/* we found an unparsed file */
 				std::ifstream ifs;
-				assert(ends_with(module_filename, ".zion"));
+				assert(ends_with(module_filename, ".llz"));
 				ifs.open(module_filename.c_str());
 
 				if (ifs.good()) {
@@ -576,30 +576,22 @@ void compiler_t::build_parse_modules(status_t &status) {
 	add_globals(status, *this, builder, program_scope, program);
 
 	if (!!status) {
-		/* always include the standard library */
-        if (getenv("NO_STD_LIB") == nullptr) {
-            build_parse(status, location_t{"std lib", 0, 0}, "lib/std");
-
-        }
+		/* now parse the main program module */
+		main_module = build_parse(
+				status, location_t{"command line build parameters", 0, 0},
+				module_name);
 
 		if (!!status) {
-			/* now parse the main program module */
-			main_module = build_parse(
-					status, location_t{"command line build parameters", 0, 0},
-					module_name);
+			debug_above(4, log(log_info, "build_parse of %s succeeded", module_name.c_str(),
+						false /*global*/));
 
-			if (!!status) {
-				debug_above(4, log(log_info, "build_parse of %s succeeded", module_name.c_str(),
-							false /*global*/));
-
-				/* next, merge the entire set of modules into one program */
-				for (const auto &module_data_pair : modules) {
-					/* note the use of the set here to ensure that each module is only
-					 * included once */
-					auto module = module_data_pair.second;
-					assert(module != nullptr);
-					program->modules.insert(module);
-				}
+			/* next, merge the entire set of modules into one program */
+			for (const auto &module_data_pair : modules) {
+				/* note the use of the set here to ensure that each module is only
+				 * included once */
+				auto module = module_data_pair.second;
+				assert(module != nullptr);
+				program->modules.insert(module);
 			}
 		}
 	}
@@ -771,8 +763,8 @@ std::string compute_module_key(std::vector<std::string> lib_paths, std::string f
 		if (starts_with(filename, lib_path)) {
 			if (working_key.size() < (filename.size() - lib_path.size())) {
 				working_key = filename.substr(lib_path.size() + 1);
-				assert(ends_with(working_key, ".zion"));
-				working_key = working_key.substr(0, working_key.size() - strlen(".zion"));
+				assert(ends_with(working_key, ".llz"));
+				working_key = working_key.substr(0, working_key.size() - strlen(".llz"));
 			}
 		}
 	}

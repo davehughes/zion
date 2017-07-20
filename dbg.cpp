@@ -20,7 +20,7 @@ void _emit_assert(
 	user_message(log_panic, status, location, ss.str().c_str());
 	log_dump();
 	// ::log_stack(log_warning);
-    DEBUG_BREAK();
+	DEBUG_BREAK();
 }
 
 depth_guard_t::depth_guard_t(int &depth, int max_depth) : depth(depth) {

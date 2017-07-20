@@ -1,0 +1,17 @@
+module posix
+
+link fn puts(x __str__) __int__
+link fn open(path __str__, oflag __int__) __int__
+link fn close(fd __int__) __int__
+link fn read(fileds __int__, buf __bytes, nbytes __int__) __int__
+link fn write(fileds __int__, buf __bytes, nbytes __int__) __int__
+link fn malloc(cb __int__) __bytes
+link fn memcpy(dst __bytes, src __bytes, n __int__) __bytes
+link fn free(pb __bytes) __bytes
+link fn calloc(cb __int__, size __int__) __bytes
+link fn strdup(s __str__) __str__
+link fn sqrt(x __float__) __float__
+link fn rand() __int__
+link fn exit(code __int__) __int__
+link fn getch() __int__
+link fn getcwd(space __str__) __str__

@@ -709,6 +709,14 @@ bound_var_t::ref ast::reference_expr_t::resolve_expression(
 	return nullptr;
 }
 
+bound_var_t::ref ast::reference_path_expr_t::resolve_expression(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		scope_t::ref block_scope,
+		life_t::ref life) const {
+	return null_impl();
+}
+
 bound_var_t::ref ast::array_index_expr_t::resolve_expression(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
