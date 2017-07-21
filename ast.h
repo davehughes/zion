@@ -288,7 +288,7 @@ namespace ast {
 	struct assignment_t : public item_impl_t<statement_t> {
 		typedef ptr<const assignment_t> ref;
 
-		static ptr<const statement_t> parse(parse_state_t &ps);
+		static ptr<const statement_t> parse(parse_state_t &ps, ptr<const reference_expr_t> ref_expr);
 		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,

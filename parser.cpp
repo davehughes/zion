@@ -119,7 +119,46 @@ ptr<const statement_t> statement_t::parse(parse_state_t &ps) {
 		eat_token();
 		return std::move(break_flow);
 	} else {
-		return assignment_t::parse(ps);
+		auto ref_expr = reference_expr_t::parse(ps);
+		if (!!ps.status) {
+			if (ps.token.tk == tk_lparen) {
+				return callsite_expr_t::parse(ps, ref_expr);
+			} else if (ps.token.tk == tk_question) {
+				ps.advance();
+				auto when_true_expr = expression_t::parse(ps);
+				if (!!ps.status) {
+					chomp_token(tk_colon);
+					auto when_false_expr = expression_t::parse(ps);
+					if (!!ps.status) {
+						auto ternary = ast::create<ternary_expr_t>(ref_expr->get_token());
+						ternary->condition = ref_expr;
+						ternary->when_true = when_true_expr;
+						ternary->when_false = when_false_expr;
+						return ternary;
+					}
+				}
+			} else if (ps.token.tk == tk_dot) {
+				auto ref_path_expr = ast::create<reference_path_expr_t>(ref_expr->token);
+				ps.advance();
+
+				do {
+					expect_token(tk_identifier);
+					ref_path_expr->path.push_back(make_code_id(ps.token));
+					ps.advance();
+
+					if (ps.token.tk == tk_dot) {
+						ps.advance();
+						continue;
+					} else {
+						break;
+					}
+				} while (ps.token.tk == tk_identifier);
+
+				return ref_path_expr;
+			} else if (ps.token.tk == tk_assign) {
+				return ref_expr;
+			}
+		}
 	}
 }
 
@@ -187,6 +226,7 @@ ptr<const reference_expr_t> reference_expr_t::parse(parse_state_t &ps) {
 	return ref_expr;
 }
 
+#if 0
 ptr<const expression_t> reference_path_expr_t::parse(parse_state_t &ps) {
 	auto ref_expr = reference_expr_t::parse(ps);
 	if (!!ps.status) {
@@ -224,13 +264,14 @@ ptr<const expression_t> reference_path_expr_t::parse(parse_state_t &ps) {
 			} while (ps.token.tk == tk_identifier);
 
 			return ref_path_expr;
-		} else {
+		} else if (ps.token.tk == tk_assign) {
 			return ref_expr;
 		}
 	}
 	assert(!ps.status);
 	return nullptr;
 }
+#endif
 
 ptr<const expression_t> expression_t::parse(parse_state_t &ps) {
 	if (ps.token.tk == tk_identifier) {
@@ -298,8 +339,7 @@ ptr<const expression_t> literal_expr_t::parse(parse_state_t &ps) {
 	}
 }
 
-ptr<const statement_t> assignment_t::parse(parse_state_t &ps) {
-	auto ref_expr = reference_expr_t::parse(ps);
+ptr<const statement_t> assignment_t::parse(parse_state_t &ps, reference_expr_t::ref ref_expr) {
 	if (!!ps.status) {
 		if (ps.token.tk == tk_assign) {
 			auto var_decl = create<ast::var_decl_t>(ref_expr->token);
@@ -314,6 +354,7 @@ ptr<const statement_t> assignment_t::parse(parse_state_t &ps) {
 			return callsite_expr_t::parse(ps, ref_expr);
 		} else {
 			ps.error("free-standing reference expression results in a noop");
+			dbg();
 		}
 	}
 
