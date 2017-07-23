@@ -19,80 +19,27 @@ std::string token_t::str() const {
 const char *tkstr(token_kind_t tk) {
 	switch (tk) {
 	tk_case(assign);
-	tk_case(break);
 	tk_case(char);
 	tk_case(colon);
 	tk_case(question);
-	tk_case(as);
-	tk_case(module);
 	tk_case(comma);
 	tk_case(comment);
-	tk_case(const);
-	tk_case(continue);
 	tk_case(dot);
-	tk_case(else);
 	tk_case(float);
-	tk_case(fn);
 	tk_case(identifier);
-	tk_case(if);
 	tk_case(integer);
 	tk_case(lcurly);
-	tk_case(line);
-	tk_case(link);
-	tk_case(loop);
 	tk_case(lparen);
 	tk_case(lsquare);
-	tk_case(match);
 	tk_case(none);
-	tk_case(polymorph);
 	tk_case(rcurly);
-	tk_case(return);
 	tk_case(rparen);
 	tk_case(rsquare);
 	tk_case(semicolon);
 	tk_case(star);
 	tk_case(string);
-	tk_case(struct);
-	tk_case(type);
-	tk_case(var);
 	}
 	return "";
-}
-
-token_kind_t translate_tk(token_kind_t tk, const zion_string_t &token_text) {
-	struct token_matcher {
-		std::string text;
-		token_kind_t tk;
-	};
-
-	static const auto token_matchers = std::vector<token_matcher>{
-		{"as", tk_as},
-		{"break", tk_break},
-		{"const", tk_const},
-		{"continue", tk_continue},
-		{"else", tk_else},
-		{"fn", tk_fn},
-		{"if", tk_if},
-		{"line", tk_line},
-		{"link", tk_link},
-		{"loop", tk_loop},
-		{"match", tk_match},
-		{"module", tk_module},
-		{"polymorph", tk_polymorph},
-		{"return", tk_return},
-		{"struct", tk_struct},
-		{"type", tk_type},
-		{"var", tk_var},
-	};
-
-	if (tk == tk_identifier) {
-		for (auto &tm : token_matchers) {
-			if (token_text == tm.text.c_str()) {
-				return tm.tk;
-			}
-		}
-	}
-	return tk;
 }
 
 void token_t::emit(int &indent_level, token_kind_t &last_tk, bool &indented_line) {
@@ -101,26 +48,14 @@ void token_t::emit(int &indent_level, token_kind_t &last_tk, bool &indented_line
 	case tk_none:
 		assert(false);
 	   	break;
+	case tk_assign:
+		printf("=");
+		break;
 	case tk_comment:
 		printf("# %s\n", text.c_str());
 		break;
-	case tk_module:
-		printf("module");
-		break;
 	case tk_question:
 		printf("?");
-		break;
-	case tk_as:
-		printf("as");
-		break;
-	case tk_line:
-		printf("line");
-		break;
-	case tk_struct:
-		printf("struct");
-		break;
-	case tk_polymorph:
-		printf("polymorph");
 		break;
 	case tk_identifier:
 		printf("%s", text.c_str());
@@ -155,66 +90,31 @@ void token_t::emit(int &indent_level, token_kind_t &last_tk, bool &indented_line
 	case tk_semicolon:
 		printf(";");
 		break;
-	case tk_type:
-		printf("type");
-		break;
-	case tk_fn:
-		printf("fn");
-		break;
-	case tk_var:
-		printf("var");
-		break;
-	case tk_const:
-		printf("const");
-		break;
-	case tk_return:
-		printf("return");
-		break;
 
 	// Literals
 	case tk_char:
-		printf("char");
+		printf("'%s'", text.c_str());
 		break;
 	case tk_float:
-		printf("float");
+		printf("%s", text.c_str());
 		break;
 	case tk_integer:
-		printf("integer");
+		printf("%s", text.c_str());
 		break;
 	case tk_string:
 		printf("string");
 		break;
 
 	// Flow control
-	case tk_if:
-		printf("if");
-		break;
-	case tk_else:
-		printf("else");
-		break;
-	case tk_loop:
-		printf("loop");
-		break;
-	case tk_continue:
-		printf("continue");
-		break;
-	case tk_break:
-		printf("break");
-		break;
-	case tk_match:
-		printf("match");
-		break;
-	case tk_assign:
-		printf("assign");
-		break;
 	case tk_star:
-		printf("star");
-		break;
-	case tk_link:
-		printf("link");
+		printf("*");
 		break;
 	}
 	last_tk = tk;
+}
+
+bool token_t::is_ident(const char *x) const {
+	return tk == tk_identifier && text == x;
 }
 
 void emit_tokens(const std::vector<token_t> &tokens) {

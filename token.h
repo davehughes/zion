@@ -23,14 +23,6 @@ enum token_kind_t {
 	tk_colon, /* : */
 	tk_dot, /* . */
 	tk_semicolon, /* ; */
-	tk_type, /* type */
-	tk_fn, /* fn */
-	tk_var, /* var */
-	tk_const, /* const */
-	tk_return, /* return */
-
-	tk_struct, /* struct */
-	tk_polymorph, /* polymorph */
 
 	// Literals
 	tk_char, /* char literal */
@@ -38,25 +30,33 @@ enum token_kind_t {
 	tk_integer, /* [0-9]+ */
 	tk_string, /* "string literal" */
 
-	tk_as,
-
-	tk_line, /* line */
-	tk_if, /* if */
-	tk_else, /* else */
-	tk_loop, /* loop */
-	tk_continue, /* continue */
-	tk_break, /* break */
-	tk_match, /* match */
-
 	// Operators
 	tk_assign,  /* = */
 	tk_star,    /* * */
-
-	// Dependency tokens
-	tk_module, /* module */
-	tk_link, /* link */
 };
 
+const char * const K_fn = "fn";
+const char * const K_return = "return";
+const char * const K_in = "in";
+const char * const K_let = "let";
+const char * const K_module = "module";
+const char * const K_link = "link";
+const char * const K_var = "var";
+const char * const K_set = "set";
+const char * const K_const = "const";
+const char * const K_call = "call";
+const char * const K_if = "if";
+const char * const K_else = "else";
+const char * const K_loop = "loop";
+const char * const K_match = "match";
+const char * const K_break = "break";
+const char * const K_continue = "continue";
+const char * const K_as = "as";
+const char * const K_then = "then";
+const char * const K_typeid = "typeid";
+const char * const K_sizeof = "sizeof";
+const char * const K_type = "type";
+#define K(x) K_##x
 
 struct token_t {
 	token_t(const location_t &location={{""},-1,-1}, token_kind_t tk=tk_none, std::string text="") : location(location), tk(tk), text(text) {}
@@ -65,6 +65,7 @@ struct token_t {
 	std::string text;
 	std::string str() const;
 	void emit(int &indent_level, token_kind_t &last_tk, bool &indented_line);
+	bool is_ident(const char *x) const;
 };
 
 const char *tkstr(token_kind_t tk);

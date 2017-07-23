@@ -351,7 +351,6 @@ l_begin:
 
 	if (gts != gts_error) {
 		if (tk != tk_none) {
-			tk = translate_tk(tk, token_text);
 			debug_above(12, log(log_info, "got llz token %s %s",
 						tkstr(tk), token_text.c_str()));
 

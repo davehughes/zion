@@ -151,24 +151,24 @@ bool test_lex_comments() {
 
 bool test_lex_functions() {
 	lexer_tests tests = {
-		{"fn", {tk_fn}},
-		{" fn", {tk_fn}},
-		{"fn ", {tk_fn}},
+		{"fn", {tk_identifier}},
+		{" fn", {tk_identifier}},
+		{"fn ", {tk_identifier}},
 		{"_def", {tk_identifier}},
 		{"definitely", {tk_identifier}},
-		{"fn A", {tk_fn, tk_identifier}},
-		{"fn A\n", {tk_fn, tk_identifier}},
-		{"fn A{\tstatement}", {tk_fn, tk_identifier, tk_lcurly, tk_identifier, tk_rcurly}},
-		{"fn A{\tstatement\n\tstatement}", {tk_fn, tk_identifier, tk_lcurly, tk_identifier, tk_identifier, tk_rcurly}},
-		{"fn A{\tpass}", {tk_fn, tk_identifier, tk_lcurly, tk_identifier, tk_rcurly}},
+		{"fn A", {tk_identifier, tk_identifier}},
+		{"fn A\n", {tk_identifier, tk_identifier}},
+		{"fn A{\tstatement}", {tk_identifier, tk_identifier, tk_lcurly, tk_identifier, tk_rcurly}},
+		{"fn A{\tstatement\n\tstatement}", {tk_identifier, tk_identifier, tk_lcurly, tk_identifier, tk_identifier, tk_rcurly}},
+		{"fn A{\tpass}", {tk_identifier, tk_identifier, tk_lcurly, tk_identifier, tk_rcurly}},
 	};
 	return lexer_test(tests);
 }
 
 bool test_lex_module_stuff() {
 	lexer_tests tests = {
-		{"module modules", {tk_module, tk_identifier}},
-		{"link module foo", {tk_link, tk_module, tk_identifier}},
+		{"module modules", {tk_identifier, tk_identifier}},
+		{"link module foo", {tk_identifier, tk_identifier, tk_identifier}},
 	};
 	return lexer_test(tests);
 }
@@ -183,8 +183,8 @@ bool test_lex_operators() {
 bool test_lex_dependency_keywords() {
 	lexer_tests tests = {
 		{"tote", {tk_identifier}},
-		{"link linker", {tk_link, tk_identifier}},
-		{"module modules # ignore this", {tk_module, tk_identifier}},
+		{"link linker", {tk_identifier, tk_identifier}},
+		{"module modules # ignore this", {tk_identifier, tk_identifier}},
 	};
 	return lexer_test(tests);
 }
@@ -201,19 +201,13 @@ bool test_lex_literals() {
 bool test_lex_syntax() {
 	lexer_tests tests = {
 		{"retur note", {tk_identifier, tk_identifier}},
-		{"return note not", {tk_return, tk_identifier, tk_identifier}},
+		{"return note not", {tk_identifier, tk_identifier, tk_identifier}},
 		{"return var = == pass.pass..",
-		   	{tk_return, tk_var, tk_assign, tk_assign, tk_assign,
+		   	{tk_identifier, tk_identifier, tk_assign, tk_assign, tk_assign,
 			   	tk_identifier, tk_dot, tk_identifier, tk_dot, tk_dot}},
 		{"nil", {tk_identifier}},
-		{"loop", {tk_loop}},
-		{"if", {tk_if}},
-		{"else", {tk_else}},
-		{"break", {tk_break}},
-		{"breakfast", {tk_identifier}},
-		{"continue", {tk_continue}},
-		{"continually", {tk_identifier}},
-		{"loop {\n\tfoo()}", {tk_loop, tk_lcurly, tk_identifier, tk_lparen, tk_rparen, tk_rcurly}},
+		{"loop", {tk_identifier}},
+		{"loop {\n\tfoo()}", {tk_identifier, tk_lcurly, tk_identifier, tk_lparen, tk_rparen, tk_rcurly}},
 		{"true false", {tk_identifier, tk_identifier}},
 		{" nothing", {tk_identifier}},
 		{"? *", {tk_question, tk_star}},
@@ -235,12 +229,12 @@ bool test_lex_floats() {
 bool test_lex_types() {
 	lexer_tests tests = {
 		{"type x struct { x X y Y }", {
-			tk_type, tk_identifier, tk_struct,
+			tk_identifier, tk_identifier, tk_identifier,
 			tk_lcurly, tk_identifier, tk_identifier,
 			tk_identifier, tk_identifier, tk_rcurly}},
 		{"type \"List{int}\" polymorph match :\r\n  ; *", {
-			tk_type, tk_string, tk_polymorph,
-			tk_match, tk_colon, tk_semicolon,
+			tk_identifier, tk_string, tk_identifier,
+			tk_identifier, tk_colon, tk_semicolon,
 			tk_star}},
 	};
 	return lexer_test(tests);
@@ -668,7 +662,7 @@ auto test_descs = std::vector<test_desc>{
 		"test_compiler_build_state",
 		[] () -> bool {
 			auto filename = "xyz.llz";
-			token_t token({filename, 1, 1}, tk_module, "xyz");
+			token_t token({filename, 1, 1}, tk_identifier, "xyz");
 			auto module = ast::create<ast::module_t>(token, filename);
 			return !!module;
 		}

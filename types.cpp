@@ -443,7 +443,7 @@ namespace types {
 	}
 
 	std::ostream &type_function_t::emit(std::ostream &os, const map &bindings) const {
-		os << tkstr(tk_fn) << " ";
+		os << K(fn) << " ";
 		args->emit(os, bindings);
 		os << " ";
 		return return_type->emit(os, bindings);

@@ -82,7 +82,7 @@ namespace ast {
 
 		static ptr<const param_list_t> parse(parse_state_t &ps);
 
-		std::vector<ptr<const reference_expr_t>> expressions;
+		std::vector<ptr<const expression_t>> expressions;
 	};
 
 	struct expression_t : public virtual item_t {
@@ -155,7 +155,7 @@ namespace ast {
 	struct callsite_expr_t : public std::enable_shared_from_this<callsite_expr_t>, public item_impl_t<callsite_expr_interface_t> {
 		typedef ptr<const callsite_expr_t> ref;
 
-		static ref parse(parse_state_t &ps, ptr<const reference_expr_t> ref_expr);
+		static ref parse(parse_state_t &ps);
 		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -169,7 +169,7 @@ namespace ast {
 				scope_t::ref block_scope,
 				life_t::ref life) const;
 
-		ptr<const reference_expr_t> function_expr;
+		ptr<const expression_t> function_expr;
 		ptr<const param_list_t> params;
 	};
 
@@ -288,7 +288,7 @@ namespace ast {
 	struct assignment_t : public item_impl_t<statement_t> {
 		typedef ptr<const assignment_t> ref;
 
-		static ptr<const statement_t> parse(parse_state_t &ps, ptr<const reference_expr_t> ref_expr);
+		static ptr<const statement_t> parse(parse_state_t &ps);
 		virtual void resolve_statement(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
@@ -479,13 +479,14 @@ namespace ast {
 	struct ternary_expr_t : public item_impl_t<expression_t> {
 		typedef ptr<const ternary_expr_t> ref;
 
+		static ref parse(parse_state_t &ps);
 		virtual bound_var_t::ref resolve_expression(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref block_scope,
 				life_t::ref life) const;
 
-		ptr<const reference_expr_t> condition;
+		ptr<const expression_t> condition;
 		ptr<const ast::expression_t> when_true, when_false;
 	};
 

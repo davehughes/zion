@@ -1,38 +1,40 @@
 integer        ::= '-'? [1-9] [0-9]*
 identifier     ::= [a-zA-Z_][_a-zA-Z0-9]* | ( "'" [^']+ "'" )
 
-type_def       ::= 'type' identifier ( ( 'struct' '{' ( identifier type_expr )+ '}' ) | ( 'polymorph' '{' identifier+ '}' ) )
-type_expr      ::= '*'* identifier
+type_def       ::=
+   'type' identifier ( ( ( 'native' | 'managed' ) 'struct' '{' ( identifier type_expr )+ '}' )
+                     | ( 'polymorph'     '{'   identifier+             '}' ) )
+
+type_expr      ::= ( ( ( '^' | '*' ) type_expr ) | identifier )
 function_decl  ::= 'fn' identifier? '(' ( identifier type_expr ( ',' identifier type_expr )* )? ')' type_expr
 function       ::= function_decl block
 
 block          ::= '{' statement* '}'
 statement      ::=
-   ( block )
- | ( ('const' | 'var')? identifier '=' expression )
+ ( ('set' | 'const' | 'var')? identifier '=' expression )
  | ( 'loop' block )
- | ( 'match' ref_expr '{' ( identifier block )+ '}' )
+ | ( 'match' expression ( 'as' identifier )? '{' ( type_expr block )+ '}' )
  | if_statement
- | ( ref_expr '(' ( ref_expr ( ',' ref_expr )* )? ')' )
- | ( 'return' ref_expr? )
+ | callsite
+ | ( 'return' expression? )
  | 'continue'
  | 'break'
 
-if_statement ::=
-	( 'if' ref_expr block 'else' ( block | if_statement ) )
+if_statement ::= 'if' expression block 'else' ( block | if_statement )
+callsite     ::= 'call' expression '(' ( expression ( ',' expression )* )? ')'
 
+/* Expressions are autoreleased if the type obeys */
 expression ::=
-  	  '*'* ref_expr
-	| literal
-	| ( ref_expr '?' expression ':' expression )
-	| ( ref_expr '(' ( ref_expr ( ',' ref_expr )* )? ')' )
-	| ( do '{' statement* expression '}' )
+   literal
+ | ref_expr
+ | callsite
+ | ( 'if' 'expression' 'then' 'expression' 'else' 'expression' )
+ | ( 'let' '{' statement* 'in' expression '}' )
 
 ref_expr       ::= identifier ( '.' identifier )*
-literal        ::= integer | string | boolean | float
+literal        ::= integer | string | boolean | float | 'null' type_expr | '&' expression
 
 module         ::= ( module_decl (link_module | link_function)* (type_def | function)* )
-module_decl    ::= 'module' identifier module_ver
-module_ver     ::= '@' integer '.' integer ('.' integer)?
+module_decl    ::= 'module' identifier
 link_module    ::= 'link' filename
 link_function  ::= 'link' function_decl
