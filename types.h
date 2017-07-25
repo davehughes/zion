@@ -132,10 +132,29 @@ namespace types {
 		type_t::ref module_type;
 	};
 
-	struct type_ref_t : public type_product_t {
-		typedef ptr<const type_ref_t> ref;
+	struct type_managed_ptr_t : public type_product_t {
+		typedef ptr<const type_managed_ptr_t> ref;
 
-		type_ref_t(type_t::ref element_type);
+		type_managed_ptr_t(type_t::ref element_type);
+
+		virtual product_kind_t get_pk() const;
+		virtual type_t::refs get_dimensions() const;
+		virtual name_index_t get_name_index() const;
+
+		virtual std::ostream &emit(std::ostream &os, const map &bindings) const;
+		virtual int ftv_count() const;
+		virtual atom::set get_ftvs() const;
+		virtual type_t::ref rebind(const map &bindings) const;
+		virtual location_t get_location() const;
+		virtual identifier::ref get_id() const;
+
+		type_t::ref element_type;
+	};
+
+	struct type_native_ptr_t : public type_product_t {
+		typedef ptr<const type_native_ptr_t> ref;
+
+		type_native_ptr_t(type_t::ref element_type);
 
 		virtual product_kind_t get_pk() const;
 		virtual type_t::refs get_dimensions() const;
@@ -269,7 +288,8 @@ types::type_t::ref type_variable(identifier::ref name);
 types::type_t::ref type_variable(location_t location);
 types::type_t::ref type_operator(types::type_t::ref operator_, types::type_t::ref operand);
 types::type_module_t::ref type_module(types::type_t::ref module);
-types::type_ref_t::ref type_ref(types::type_t::ref element);
+types::type_managed_ptr_t::ref type_managed_ptr(types::type_t::ref element);
+types::type_native_ptr_t::ref type_native_ptr(types::type_t::ref element);
 types::type_struct_t::ref type_struct(types::type_t::refs dimensions, types::name_index_t name_index);
 types::type_args_t::ref type_args(types::type_t::refs args, types::name_index_t name_index={});
 types::type_args_t::ref type_args(identifier::refs ids, types::name_index_t name_index={});

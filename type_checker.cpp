@@ -617,7 +617,7 @@ void ast::callsite_expr_t::resolve_statement(
 	bound_var_t::refs arguments;
 
 	if (auto symbol = dyncast<const ast::reference_expr_t>(function_expr)) {
-		if (symbol->token.text == "static_print") {
+		if (symbol->get_token().text == "static_print") {
 			if (params->expressions.size() == 1) {
 				auto param = params->expressions[0];
 				bound_var_t::ref param_var = param->resolve_expression(
@@ -693,28 +693,23 @@ bound_var_t::ref ast::reference_expr_t::resolve_expression(
 		scope_t::ref scope,
 		life_t::ref life) const
 {
+	// TODO: handle path depth > 1
+	assert(path.size() == 1);
+	auto name = path[0]->get_name();
 	/* we wouldn't be referencing a variable name here unless it was unique
 	 * override resolution only happens on callsites, and we don't allow
 	 * passing around unresolved overload references */
 	bound_var_t::ref var = scope->get_bound_variable(status, get_location(),
-			token.text);
+			name);
 
 	if (!!status) {
 		return var;
 	} else {
-		user_error(status, get_location(), "undefined symbol " c_id("%s"), token.text.c_str());
+		user_error(status, get_location(), "undefined symbol " c_id("%s"), name.c_str());
 	}
 
 	assert(!status);
 	return nullptr;
-}
-
-bound_var_t::ref ast::reference_path_expr_t::resolve_expression(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		scope_t::ref block_scope,
-		life_t::ref life) const {
-	return null_impl();
 }
 
 bound_var_t::ref ast::array_index_expr_t::resolve_expression(
@@ -2248,8 +2243,9 @@ bound_var_t::ref ast::reference_expr_t::resolve_overrides(
 				"reference_expr_t::resolve_overrides for %s",
 				callsite->str().c_str()));
 
+	auto name = get_token();
 	/* ok, we know we've got some variable here */
-	auto bound_var = get_callable(status, builder, scope, token.text,
+	auto bound_var = get_callable(status, builder, scope, name.text,
 			shared_from_this(), get_args_type(args));
 	if (!!status) {
 		return bound_var;

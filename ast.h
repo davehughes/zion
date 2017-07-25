@@ -206,7 +206,7 @@ namespace ast {
 				life_t::ref life) const;
 
 		ptr<const reference_expr_t> lhs;
-		token_t type_cast;
+		types::type_t::ref type_cast;
 		bool force_cast = false;
 	};
 
@@ -510,19 +510,6 @@ namespace ast {
 				life_t::ref,
 				const ptr<const ast::item_t> &obj,
 				const bound_type_t::refs &args) const;
-	};
-
-	struct reference_path_expr_t : public item_impl_t<expression_t> {
-		typedef ptr<const reference_path_expr_t> ref;
-
-		static ptr<const expression_t> parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_expression(
-				status_t &status,
-				llvm::IRBuilder<> &builder,
-				scope_t::ref block_scope,
-				life_t::ref life) const;
-
-		reference_expr_t::ref root;
 		std::vector<identifier::ref> path;
 	};
 

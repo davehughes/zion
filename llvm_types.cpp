@@ -7,7 +7,6 @@
 #include "logger.h"
 #include <iostream>
 
-#if 0
 bound_type_t::refs upsert_bound_types(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
@@ -28,42 +27,59 @@ bound_type_t::refs upsert_bound_types(
 	}
 	return bound_args;
 }
-#endif
 
-bound_type_t::ref create_ref_ptr_type(
+bound_type_t::ref create_managed_ptr_type(
 		llvm::IRBuilder<> &builder,
-		types::type_ref_t::ref ref_type)
+		types::type_managed_ptr_t::ref managed_ptr)
 {
-	debug_above(4, log(log_info, "creating ref type for %s",
-				ref_type->element_type->str().c_str()));
+	debug_above(4, log(log_info, "creating managed ptr type for %s",
+				managed_ptr->element_type->str().c_str()));
 	llvm::StructType *llvm_type = llvm::StructType::create(
 			builder.getContext(),
-			ref_type->element_type->get_signature().str());
+			managed_ptr->element_type->get_signature().str());
 	assert(!llvm_type->isSized());
 	assert(llvm_type->isOpaque());
 
 	return bound_type_t::create(
-			ref_type,
-			ref_type->get_location(),
+			managed_ptr,
+			managed_ptr->get_location(),
 			llvm_type->getPointerTo());
 }
 
-bound_type_t::ref create_bound_ref_type(
+bound_type_t::ref create_native_ptr_type(
+		llvm::IRBuilder<> &builder,
+		types::type_native_ptr_t::ref native_ptr)
+{
+	debug_above(4, log(log_info, "creating native ptr type for %s",
+				native_ptr->element_type->str().c_str()));
+	llvm::StructType *llvm_type = llvm::StructType::create(
+			builder.getContext(),
+			native_ptr->element_type->get_signature().str());
+	assert(!llvm_type->isSized());
+	assert(llvm_type->isOpaque());
+
+	return bound_type_t::create(
+			native_ptr,
+			native_ptr->get_location(),
+			llvm_type->getPointerTo());
+}
+
+bound_type_t::ref create_bound_managed_ptr_type(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		ptr<scope_t> scope,
-		const ptr<const types::type_ref_t> &ref_type)
+		const ptr<const types::type_managed_ptr_t> &type_managed_ptr)
 {
 	/* create a bound_type for a pointer/ref type */
 	ptr<program_scope_t> program_scope = scope->get_program_scope();
 
-	assert(!scope->get_bound_type(ref_type->get_signature()));
+	assert(!scope->get_bound_type(type_managed_ptr->get_signature()));
 
-	atom::set ftvs = ref_type->get_ftvs();
+	atom::set ftvs = type_managed_ptr->get_ftvs();
 	if (ftvs.size() != 0) {
-		user_error(status, ref_type->get_location(),
+		user_error(status, type_managed_ptr->get_location(),
 				"unable to instantiate type %s because free variables [%s] still exist",
-				ref_type->str().c_str(),
+				type_managed_ptr->str().c_str(),
 				join_with(ftvs, ", ", [] (atom a) -> std::string {
 					return string_format(c_id("%s"), a.c_str());
 					}).c_str());
@@ -71,7 +87,7 @@ bound_type_t::ref create_bound_ref_type(
 	}
 
 	/* get the element type's bound type, if it exists */
-	bound_type_t::ref bound_type = scope->get_bound_type(ref_type->element_type->get_signature());
+	bound_type_t::ref bound_type = scope->get_bound_type(type_managed_ptr->element_type->get_signature());
 
 	if (bound_type != nullptr) {
 		bool managed = false;
@@ -87,8 +103,8 @@ bound_type_t::ref create_bound_ref_type(
 			managed = type_name.find("managed.struct") == 0;
 		}
 
-		return bound_type_t::create(ref_type,
-				ref_type->get_location(),
+		return bound_type_t::create(type_managed_ptr,
+				type_managed_ptr->get_location(),
 				bound_type->get_llvm_specific_type()->getPointerTo());
 	}
 				
@@ -96,22 +112,22 @@ bound_type_t::ref create_bound_ref_type(
 	 * opaque placeholder for the struct's concrete type */
 	
 	/* first create the opaque pointer type */
-	auto bound_pointer_type = create_ref_ptr_type(builder, ref_type);
+	auto bound_pointer_type = create_ref_ptr_type(builder, type_managed_ptr);
 	program_scope->put_bound_type(status, bound_pointer_type);
 
 	debug_above(6, log("create_bound_ref_type(..., %s)",
-				ref_type->str().c_str()));
+				type_managed_ptr->str().c_str()));
 	
 	/* before we return the pointer type, let's go ahead and instantiate
 	 * the actual structural type */
-	auto element = upsert_bound_type(status, builder, scope, ref_type->element_type);
+	auto element = upsert_bound_type(status, builder, scope, type_managed_ptr->element_type);
 
 	if (!!status) {
 		// auto llvm_element_type = llvm::dyn_cast<llvm::StructType>(element->get_llvm_specific_type());
 		// assert(llvm_element_type != nullptr);
 		// assert(!llvm_element_type->isOpaque());
 
-		// auto bound_element_type = scope->get_bound_type(ref_type->element_type->get_signature());
+		// auto bound_element_type = scope->get_bound_type(type_managed_ptr->element_type->get_signature());
 		// assert(bound_element_type != nullptr);
 		// assert(bound_element_type->get_llvm_specific_type() == element->get_llvm_specific_type());
 
@@ -507,6 +523,37 @@ bound_type_t::ref create_bound_type(
 		return create_bound_raw_pointer_type(status, builder, scope, raw);
 	}
 
+	assert(!status);
+	return nullptr;
+}
+
+bound_type_t::ref upsert_bound_type(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		ptr<scope_t> scope,
+		types::type_t::ref type)
+{
+	if (!!status) {
+		auto signature = type->get_signature();
+		auto bound_type = scope->get_bound_type(signature);
+		if (bound_type != nullptr) {
+			/* this case is critical for breaking cycles during structure
+			 * instantiation */
+			return bound_type;
+		} else {
+			/* we believe that this type does not exist. let's build it */
+			bound_type = create_bound_type(status, builder, scope, type);
+
+			if (!!status) {
+				return bound_type;
+			}
+
+			user_error(status, type->get_location(),
+					"unable to find a definition for %s in scope " c_id("%s"),
+					type->str().c_str(),
+					scope->get_name().c_str());
+		}
+	}
 	assert(!status);
 	return nullptr;
 }

@@ -35,7 +35,6 @@ protected:
 public:
 	bool is_function() const;
 	bool is_void() const;
-	bool is_ref() const;
 	bool is_maybe() const;
     bool is_managed() const;
     bool is_module() const;

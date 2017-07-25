@@ -183,14 +183,6 @@ bool bound_type_t::is_maybe() const {
 	}
 }
 
-bool bound_type_t::is_ref() const {
-	if (dyncast<const types::type_ref_t>(get_type())) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
 bool bound_type_t::is_module() const {
 	return types::is_type_id(get_type(), "module");
 }

@@ -181,7 +181,7 @@ ptr<const expression_t> parse_cast_wrap(parse_state_t &ps, ptr<reference_expr_t>
 		cast->lhs = expr;
 
 		expect_token(tk_identifier);
-		cast->type_cast = ps.token;
+		cast->type_cast = parse_type_ref(ps);
 		ps.advance();
         return cast;
     } else {
@@ -194,11 +194,9 @@ ptr<const callsite_expr_t> callsite_expr_t::parse(parse_state_t &ps) {
 	chomp_ident(K(call));
 	callsite->function_expr = expression_t::parse(ps);
 	if (!!ps.status) {
-		chomp_token(tk_lparen);
 		auto params = param_list_t::parse(ps);
 		if (!!ps.status) {
 			callsite->params = params;
-			chomp_token(tk_rparen);
 			return callsite;
 		} else {
 			return nullptr;
@@ -211,56 +209,15 @@ ptr<const callsite_expr_t> callsite_expr_t::parse(parse_state_t &ps) {
 ptr<const reference_expr_t> reference_expr_t::parse(parse_state_t &ps) {
 	expect_token(tk_identifier);
 	auto ref_expr = create<ast::reference_expr_t>(ps.token);
-	ps.advance();
+	ref_expr->path.push_back(make_code_id(ps.token));
+	while (ps.advance(), ps.token.tk == tk_dot) {
+		ps.advance();
+		expect_token(tk_identifier);
+		ref_expr->path.push_back(make_code_id(ps.token));
+	}
+
 	return ref_expr;
 }
-
-#if 0
-ptr<const expression_t> reference_path_expr_t::parse(parse_state_t &ps) {
-	auto ref_expr = reference_expr_t::parse(ps);
-	if (!!ps.status) {
-		if (ps.token.tk == tk_lparen) {
-			return callsite_expr_t::parse(ps, ref_expr);
-		} else if (ps.token.tk == tk_question) {
-			ps.advance();
-			auto when_true_expr = expression_t::parse(ps);
-			if (!!ps.status) {
-				chomp_token(tk_colon);
-				auto when_false_expr = expression_t::parse(ps);
-				if (!!ps.status) {
-					auto ternary = ast::create<ternary_expr_t>(ref_expr->get_token());
-					ternary->condition = ref_expr;
-					ternary->when_true = when_true_expr;
-					ternary->when_false = when_false_expr;
-					return ternary;
-				}
-			}
-		} else if (ps.token.tk == tk_dot) {
-			auto ref_path_expr = ast::create<reference_path_expr_t>(ref_expr->token);
-			ps.advance();
-
-			do {
-				expect_token(tk_identifier);
-				ref_path_expr->path.push_back(make_code_id(ps.token));
-				ps.advance();
-
-				if (ps.token.tk == tk_dot) {
-					ps.advance();
-					continue;
-				} else {
-					break;
-				}
-			} while (ps.token.tk == tk_identifier);
-
-			return ref_path_expr;
-		} else if (ps.token.tk == tk_assign) {
-			return ref_expr;
-		}
-	}
-	assert(!ps.status);
-	return nullptr;
-}
-#endif
 
 ternary_expr_t::ref ternary_expr_t::parse(parse_state_t &ps) {
 	chomp_ident(K(if));
@@ -293,6 +250,8 @@ ptr<const expression_t> expression_t::parse(parse_state_t &ps) {
 		return typeid_expr_t::parse(ps);
 	} else if (ps.token.is_ident(K(sizeof))) {
 		return sizeof_expr_t::parse(ps);
+	} else if (ps.token.tk == tk_identifier) {
+		return reference_expr_t::parse(ps);
 	} else {
 		return literal_expr_t::parse(ps);
 	}
@@ -676,22 +635,21 @@ ptr<const user_defined_type_t> user_defined_type_t::parse(parse_state_t &ps) {
 	auto type_name = ps.token;
 	ps.advance();
 
-	switch (ps.token.tk) {
-	case tk_struct:
+	if (ps.token.is_ident(K(struct))) {
 		return struct_t::parse(ps, type_name);
-	case tk_polymorph:
+	} else if (ps.token.is_ident(K(polymorph))) {
 		return polymorph_t::parse(ps, type_name);
-	default:
+	} else {
 		ps.error(
-				"type descriptions must begin with "
-			   	c_id("struct") ", " c_id("polymorph") ". (Found %s)",
+				"type descriptions must begin with '%s' or '%s'. (Found %s)",
+				K(struct), K(polymorph),
 				ps.token.str().c_str());
 		return nullptr;
 	}
 }
 
 polymorph_t::ref polymorph_t::parse(parse_state_t &ps, token_t type_name) {
-	chomp_token(tk_polymorph);
+	chomp_ident(K(polymorph));
 	chomp_token(tk_lcurly);
 
 	auto polymorph = ast::create<polymorph_t>(type_name);
@@ -716,7 +674,7 @@ polymorph_t::ref polymorph_t::parse(parse_state_t &ps, token_t type_name) {
 }
 
 struct_t::ref struct_t::parse(parse_state_t &ps, token_t type_name) {
-	chomp_token(tk_struct);
+	chomp_ident(K(struct));
 	chomp_token(tk_lcurly);
 	auto struct_ = ast::create<struct_t>(type_name);
 	while (ps.token.tk != tk_rcurly) {
@@ -738,13 +696,30 @@ struct_t::ref struct_t::parse(parse_state_t &ps, token_t type_name) {
 }
 
 types::type_t::ref parse_type_ref(parse_state_t &ps) {
+	std::list<token_kind_t> tks;
+	while (ps.token.tk == tk_hat || ps.token.tk == tk_star) {
+		tks.push_back(ps.token.tk);
+		ps.advance();
+	}
+
 	if (ps.token.tk == tk_identifier) {
 		auto token = ps.token;
 		ps.advance();
-		return type_id(make_code_id(token));
+		auto type = type_id(make_code_id(token));
+		for (auto tk : tks) {
+			switch (tk) {
+			case tk_star:
+				type = type_native_ptr(type);
+				break;
+			case tk_hat:
+				type = type_managed_ptr(type);
+				break;
+			}
+		}
+		return type;
 	} else {
-		ps.error("invalid type: cannot begin a type with %s", ps.token.text.c_str());
-		return null_impl();
+		ps.error("invalid type: expected an identifier (got %s)", ps.token.text.c_str());
+		return nullptr;
 	}
 }
 
@@ -770,7 +745,7 @@ ptr<const module_t> module_t::parse(parse_state_t &ps) {
 		module->decl = module_decl;
 
 		// Get links
-		while (ps.token.tk == tk_link) {
+		while (ps.token.is_ident(K(link))) {
 			auto link_statement = link_statement_parse(ps);
 			if (auto linked_module = dyncast<const link_module_statement_t>(link_statement)) {
 				module->linked_modules.push_back(linked_module);
@@ -781,13 +756,13 @@ ptr<const module_t> module_t::parse(parse_state_t &ps) {
 		
 		// Get vars, functions or type defs
 		while (!!ps.status) {
-			if (ps.token.tk == tk_fn) {
+			if (ps.token.is_ident(K(fn))) {
 				/* function definitions */
 				auto function = function_defn_t::parse(ps);
 				if (!!ps.status) {
 					module->functions.push_back(function);
 				}
-			} else if (ps.token.tk == tk_type) {
+			} else if (ps.token.is_ident(K(type))) {
 				/* type definitions */
 				auto user_defined_type = user_defined_type_t::parse(ps);
 				if (!!ps.status) {

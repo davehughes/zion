@@ -119,6 +119,10 @@ l_begin:
 				gts = gts_end;
 				tk = tk_star;
 				break;
+			case '^':
+				gts = gts_end;
+				tk = tk_hat;
+				break;
 			case '#':
 				gts = gts_comment;
 				tk = tk_comment;

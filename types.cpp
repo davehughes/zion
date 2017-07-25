@@ -331,7 +331,7 @@ namespace types {
 		return nullptr;
 	}
 
-	type_ref_t::type_ref_t(type_t::ref element_type) :
+	type_managed_ptr_t::type_managed_ptr_t(type_t::ref element_type) :
 		element_type(element_type)
 	{
 #ifdef ZION_DEBUG
@@ -339,46 +339,97 @@ namespace types {
 #endif
 	}
 
-	product_kind_t type_ref_t::get_pk() const {
+	product_kind_t type_managed_ptr_t::get_pk() const {
 		return pk_ref;
 	}
 
-	type_t::refs type_ref_t::get_dimensions() const {
+	type_t::refs type_managed_ptr_t::get_dimensions() const {
 		return {element_type};
 	}
 
-	name_index_t type_ref_t::get_name_index() const {
+	name_index_t type_managed_ptr_t::get_name_index() const {
 		return {};
 	}
 
-	std::ostream &type_ref_t::emit(std::ostream &os, const map &bindings) const {
+	std::ostream &type_managed_ptr_t::emit(std::ostream &os, const map &bindings) const {
 		os << "ref ";
 		element_type->emit(os, bindings);
 		return os;
 	}
 
-	int type_ref_t::ftv_count() const {
+	int type_managed_ptr_t::ftv_count() const {
 		return element_type->ftv_count();
 	}
 
-	atom::set type_ref_t::get_ftvs() const {
+	atom::set type_managed_ptr_t::get_ftvs() const {
 		return element_type->get_ftvs();
     }
 
 
-	type_t::ref type_ref_t::rebind(const map &bindings) const {
+	type_t::ref type_managed_ptr_t::rebind(const map &bindings) const {
 		if (bindings.size() == 0) {
 			return shared_from_this();
 		}
 
-		return ::type_ref(element_type->rebind(bindings));
+		return ::type_managed_ptr(element_type->rebind(bindings));
 	}
 
-	location_t type_ref_t::get_location() const {
+	location_t type_managed_ptr_t::get_location() const {
 		return element_type->get_location();
 	}
 
-	identifier::ref type_ref_t::get_id() const {
+	identifier::ref type_managed_ptr_t::get_id() const {
+		return element_type->get_id();
+	}
+
+	type_native_ptr_t::type_native_ptr_t(type_t::ref element_type) :
+		element_type(element_type)
+	{
+#ifdef ZION_DEBUG
+		assert(element_type != nullptr);
+#endif
+	}
+
+	product_kind_t type_native_ptr_t::get_pk() const {
+		return pk_ref;
+	}
+
+	type_t::refs type_native_ptr_t::get_dimensions() const {
+		return {element_type};
+	}
+
+	name_index_t type_native_ptr_t::get_name_index() const {
+		return {};
+	}
+
+	std::ostream &type_native_ptr_t::emit(std::ostream &os, const map &bindings) const {
+		os << "ref ";
+		element_type->emit(os, bindings);
+		return os;
+	}
+
+	int type_native_ptr_t::ftv_count() const {
+		return element_type->ftv_count();
+	}
+
+	atom::set type_native_ptr_t::get_ftvs() const {
+		return element_type->get_ftvs();
+    }
+
+
+	type_t::ref type_native_ptr_t::rebind(const map &bindings) const {
+		if (bindings.size() == 0) {
+			return shared_from_this();
+		}
+
+		return ::type_native_ptr(element_type->rebind(bindings));
+	}
+
+	location_t type_native_ptr_t::get_location() const {
+		return element_type->get_location();
+	}
+
+	identifier::ref type_native_ptr_t::get_id() const {
 		return element_type->get_id();
 	}
 
@@ -735,8 +786,12 @@ types::type_module_t::ref type_module(types::type_t::ref module_type) {
 	return make_ptr<types::type_module_t>(module_type);
 }
 
-types::type_ref_t::ref type_ref(types::type_t::ref element_type) {
-	return make_ptr<types::type_ref_t>(element_type);
+types::type_managed_ptr_t::ref type_managed_ptr(types::type_t::ref element_type) {
+	return make_ptr<types::type_managed_ptr_t>(element_type);
+}
+
+types::type_native_ptr_t::ref type_native_ptr(types::type_t::ref element_type) {
+	return make_ptr<types::type_native_ptr_t>(element_type);
 }
 
 types::type_function_t::ref type_function(
@@ -892,8 +947,11 @@ types::type_t::ref eval(types::type_t::ref type, types::type_t::map env) {
 	} else if (auto struct_type = dyncast<const types::type_struct_t>(type)) {
 		/* there is no expansion of struct types */
 		return nullptr;
-	} else if (auto ref_type = dyncast<const types::type_ref_t>(type)) {
-		/* there is no expansion of ref types */
+	} else if (auto ref_type = dyncast<const types::type_managed_ptr_t>(type)) {
+		/* there is no expansion of managed ptr types */
+		return nullptr;
+	} else if (auto ref_type = dyncast<const types::type_native_ptr_t>(type)) {
+		/* there is no expansion of native ptr types */
 		return nullptr;
 	} else if (auto sum_type = dyncast<const types::type_sum_t>(type)) {
 		/* there is no expansion of sum types */

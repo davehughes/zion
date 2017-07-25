@@ -33,6 +33,7 @@ enum token_kind_t {
 	// Operators
 	tk_assign,  /* = */
 	tk_star,    /* * */
+	tk_hat,    /* ^ */
 };
 
 const char * const K_fn = "fn";
@@ -56,6 +57,8 @@ const char * const K_then = "then";
 const char * const K_typeid = "typeid";
 const char * const K_sizeof = "sizeof";
 const char * const K_type = "type";
+const char * const K_struct = "struct";
+const char * const K_polymorph = "polymorph";
 #define K(x) K_##x
 
 struct token_t {

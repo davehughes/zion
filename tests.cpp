@@ -345,7 +345,7 @@ bool test_parse_single_line_when() {
 
 bool test_parse_single_function_call() {
 	return check_parse<ast::block_t>(
-		   	"{fib(n)}",
+		   	"{call fib(n)}",
 			"test" /*module*/);
 }
 
