@@ -112,7 +112,7 @@ bound_type_t::ref create_bound_managed_ptr_type(
 	 * opaque placeholder for the struct's concrete type */
 	
 	/* first create the opaque pointer type */
-	auto bound_pointer_type = create_ref_ptr_type(builder, type_managed_ptr);
+	auto bound_pointer_type = create_managed_ptr_type(builder, type_managed_ptr);
 	program_scope->put_bound_type(status, bound_pointer_type);
 
 	debug_above(6, log("create_bound_ref_type(..., %s)",
@@ -123,19 +123,20 @@ bound_type_t::ref create_bound_managed_ptr_type(
 	auto element = upsert_bound_type(status, builder, scope, type_managed_ptr->element_type);
 
 	if (!!status) {
-		// auto llvm_element_type = llvm::dyn_cast<llvm::StructType>(element->get_llvm_specific_type());
-		// assert(llvm_element_type != nullptr);
-		// assert(!llvm_element_type->isOpaque());
-
-		// auto bound_element_type = scope->get_bound_type(type_managed_ptr->element_type->get_signature());
-		// assert(bound_element_type != nullptr);
-		// assert(bound_element_type->get_llvm_specific_type() == element->get_llvm_specific_type());
-
 		return bound_pointer_type;
 	}
 
 	assert(!status);
 	return nullptr;
+}
+
+bound_type_t::ref create_bound_native_ptr_type(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		ptr<scope_t> scope,
+		const ptr<const types::type_native_ptr_t> &type_native_ptr)
+{
+	return null_impl();
 }
 
 std::vector<llvm::Type *> build_struct_elements(
@@ -197,8 +198,8 @@ bound_type_t::ref create_bound_struct_type(
 	/* get the pointer type to this, if it exists, get the opaque struct
 	 * pointer that it had created. fill it out. if it doesn't exist,
 	 * create it, then extract this tuple type from that. */
-	types::type_t::ref ref_type = type_ref(struct_type);
-	bound_type_t::ref bound_ref_type = upsert_bound_type(status, builder, scope, ref_type);
+	types::type_t::ref managed_ptr_type = type_managed_ptr(struct_type);
+	bound_type_t::ref bound_ref_type = upsert_bound_type(status, builder, scope, managed_ptr_type);
 
 	if (auto bound_type = scope->get_bound_type(struct_type->get_signature())) {
 		/* while instantiating our pointer type, we also instantiated this */
@@ -504,8 +505,10 @@ bound_type_t::ref create_bound_type(
 		return create_bound_id_type(status, builder, scope, id);
     } else if (auto maybe = dyncast<const types::type_maybe_t>(type)) {
 		return create_bound_maybe_type(status, builder, scope, maybe);
-	} else if (auto ref = dyncast<const types::type_ref_t>(type)) {
-		return create_bound_ref_type(status, builder, scope, ref);
+	} else if (auto managed_ptr = dyncast<const types::type_managed_ptr_t>(type)) {
+		return create_bound_managed_ptr_type(status, builder, scope, managed_ptr);
+	} else if (auto native_ptr = dyncast<const types::type_native_ptr_t>(type)) {
+		return create_bound_native_ptr_type(status, builder, scope, native_ptr);
 	} else if (auto struct_type = dyncast<const types::type_struct_t>(type)) {
 		return create_bound_struct_type(status, builder, scope, struct_type);
 	} else if (auto function = dyncast<const types::type_function_t>(type)) {
@@ -589,7 +592,7 @@ std::pair<bound_var_t::ref, bound_type_t::ref> instantiate_tuple_ctor(
 	if (!!status) {
 		program_scope_t::ref program_scope = scope->get_program_scope();
 
-		types::type_ref_t::ref type = type_ref(type_struct(get_types(args), {} /* name_index */));
+		types::type_managed_ptr_t::ref type = type_managed_ptr(type_struct(get_types(args), {} /* name_index */));
 		bound_type_t::ref data_type = upsert_bound_type(status, builder, scope, type);
 
 		if (!!status) {
@@ -862,8 +865,10 @@ bound_var_t::ref get_or_create_tuple_ctor(
 	}
 
 	/* destructure the ref ptr that this should be */
-	if (auto ref = dyncast<const types::type_ref_t>(expanded_type)) {
+	if (auto ref = dyncast<const types::type_managed_ptr_t>(expanded_type)) {
 		expanded_type = ref->element_type;
+	} else if (auto ref = dyncast<const types::type_native_ptr_t>(expanded_type)) {
+		not_impl();
 	} else {
 		user_error(status, id->get_location(), "we should have created a ref type as the return value: %s",
 				expanded_type->str().c_str());

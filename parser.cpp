@@ -714,6 +714,8 @@ types::type_t::ref parse_type_ref(parse_state_t &ps) {
 			case tk_hat:
 				type = type_managed_ptr(type);
 				break;
+			default:
+				break;
 			}
 		}
 		return type;

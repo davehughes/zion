@@ -126,10 +126,10 @@ types::type_t::ref instantiate_data_ctor_type(
 		if (auto module_scope = dyncast<module_scope_t>(scope)) {
 
 			/* create the actual expanded type signature of this type */
-			types::type_t::ref type = type_ref(struct_);
+			types::type_t::ref type = type_managed_ptr(struct_);
 			auto ctor_return_type = tag_type;
 
-			/* for now assume all ctors return refs */
+			/* for now assume all ctors return managed ptrs */
 			debug_above(4, log(log_info, "return type for %s will be %s",
 						id->str().c_str(), ctor_return_type->str().c_str()));
 

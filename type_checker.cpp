@@ -986,7 +986,9 @@ types::type_t::ref eval_to_struct_ref(
 		ast::item_t::ref node,
 		types::type_t::ref type)
 {
-	if (dyncast<const types::type_ref_t>(type)) {
+	if (dyncast<const types::type_managed_ptr_t>(type)) {
+		return type;
+	} else if (dyncast<const types::type_native_ptr_t>(type)) {
 		return type;
 	} else if (dyncast<const types::type_maybe_t>(type)) {
 		user_error(status, node->get_location(),
@@ -1013,13 +1015,13 @@ types::type_t::ref eval_to_struct_ref(
 	return nullptr;
 }
 
-types::type_struct_t::ref get_struct_type_from_ref(
+types::type_struct_t::ref get_struct_type_from_managed_ptr(
 		status_t &status,
 		ast::item_t::ref node,
 		types::type_t::ref type)
 {
-	if (auto type_ref = dyncast<const types::type_ref_t>(type)) {
-		if (auto struct_type = dyncast<const types::type_struct_t>(type_ref->element_type)) {
+	if (auto type_managed_ptr = dyncast<const types::type_managed_ptr_t>(type)) {
+		if (auto struct_type = dyncast<const types::type_struct_t>(type_managed_ptr->element_type)) {
 			return struct_type;
 		} else {
 			panic("no struct type found in ref");
@@ -1057,7 +1059,7 @@ bound_var_t::ref extract_member_variable(
 
 		auto bound_struct_ref = upsert_bound_type(status, builder, scope, type);
 
-		types::type_struct_t::ref struct_type = get_struct_type_from_ref(
+		types::type_struct_t::ref struct_type = get_struct_type_from_managed_ptr(
 				status, node, type);
 
 		if (!status) {
@@ -2192,7 +2194,7 @@ bound_var_t::ref ast::literal_expr_t::resolve_expression(
 	case tk_integer:
         {
 			/* create a native integer */
-			int64_t value = atoll(token.text.substr(0, token.text.size() - 1).c_str());
+			int64_t value = atoll(token.text.c_str());
 			bound_type_t::ref native_type = program_scope->get_bound_type({INT_TYPE});
 			return bound_var_t::create(
 					INTERNAL_LOC(), "raw_int_literal", native_type,
@@ -2203,7 +2205,7 @@ bound_var_t::ref ast::literal_expr_t::resolve_expression(
 		break;
     case tk_string:
 		{
-			std::string value = unescape_json_quotes(token.text.substr(0, token.text.size() - 1));
+			std::string value = unescape_json_quotes(token.text);
 			bound_type_t::ref native_type = program_scope->get_bound_type({STR_TYPE});
 			return bound_var_t::create(
 					INTERNAL_LOC(), "raw_str_literal", native_type,
@@ -2214,7 +2216,7 @@ bound_var_t::ref ast::literal_expr_t::resolve_expression(
 		break;
 	case tk_float:
 		{
-			double value = atof(token.text.substr(0, token.text.size() - 1).c_str());
+			double value = atof(token.text.c_str());
 			bound_type_t::ref native_type = program_scope->get_bound_type({FLOAT_TYPE});
 			return bound_var_t::create(
 					INTERNAL_LOC(), "raw_float_literal", native_type,
@@ -2243,9 +2245,13 @@ bound_var_t::ref ast::reference_expr_t::resolve_overrides(
 				"reference_expr_t::resolve_overrides for %s",
 				callsite->str().c_str()));
 
-	auto name = get_token();
+	// scope->dump(std::cerr);
+	auto name = join_with(path, ".", [](identifier::ref x) -> std::string {
+		return x->get_name().str();
+	});
+
 	/* ok, we know we've got some variable here */
-	auto bound_var = get_callable(status, builder, scope, name.text,
+	auto bound_var = get_callable(status, builder, scope, name,
 			shared_from_this(), get_args_type(args));
 	if (!!status) {
 		return bound_var;

@@ -21,17 +21,18 @@ const char *tkstr(token_kind_t tk) {
 	tk_case(assign);
 	tk_case(char);
 	tk_case(colon);
-	tk_case(question);
 	tk_case(comma);
 	tk_case(comment);
 	tk_case(dot);
 	tk_case(float);
+	tk_case(hat);
 	tk_case(identifier);
 	tk_case(integer);
 	tk_case(lcurly);
 	tk_case(lparen);
 	tk_case(lsquare);
 	tk_case(none);
+	tk_case(question);
 	tk_case(rcurly);
 	tk_case(rparen);
 	tk_case(rsquare);
@@ -62,6 +63,9 @@ void token_t::emit(int &indent_level, token_kind_t &last_tk, bool &indented_line
 		break;
 	case tk_dot:
 		printf(".");
+		break;
+	case tk_hat:
+		printf("^");
 		break;
 	case tk_lparen:
 		printf("(");
