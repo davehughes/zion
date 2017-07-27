@@ -7,6 +7,7 @@
 #include <csignal>
 #include "logger_decls.h"
 #include "json_lexer.h"
+#include "status.h"
 
 lexer_t::lexer_t(atom filename, std::istream &is)
 	: m_filename(filename), m_is(is)
@@ -57,7 +58,8 @@ bool istchar(char ch) {
 
 void advance_line_col(char ch, int &line, int &col);
 
-bool lexer_t::get_token(
+void lexer_t::get_token(
+		status_t &status,
 		token_t &token,
 		std::vector<token_t> *comments)
 {
@@ -346,9 +348,8 @@ l_begin:
 			assert(ch == ch_old);
 
 			if (!m_is.fail() && !token_text.append(ch)) {
-				log(log_error, "symbol too long? [line %d: col %d]",
-						m_line, m_col);
-				return false;
+				user_error(status, location_t{m_filename, m_line, m_col}, "symbol too long");
+				return;
 			}
 		}
 	}
@@ -367,14 +368,14 @@ l_begin:
 				}
 			}
 
-			return true;
+			return;
 		} else if (ch == EOF) {
 			token = token_t({m_filename, line, col}, tk_none, token_text.str());
-			return false;
+			return;
 		}
+	} else {
+		user_error(status, location_t{m_filename, m_line, m_col}, "encountered a lexical error");
 	}
-
-	return false;
 }
 
 lexer_t::~lexer_t() {

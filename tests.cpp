@@ -22,11 +22,13 @@
 } else {}
 
 std::vector<token_kind_t> get_tks(lexer_t &lexer, std::vector<token_t> &comments) {
+	status_t status;
 	std::vector<token_kind_t> tks;
 	token_t token;
-	while (lexer.get_token(token, &comments)) {
+	while (lexer.get_token(status, token, &comments), !!status && token.tk != tk_none) {
 		tks.push_back(token.tk);
 	}
+	assert(!!status);
 	return tks;
 }
 

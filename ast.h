@@ -283,6 +283,7 @@ namespace ast {
 		/* the inherited ast::item::token member contains the actual identifier
 		 * name */
 		ptr<const expression_t> initializer;
+		bool constant;
 	};
 
 	struct assignment_t : public item_impl_t<statement_t> {

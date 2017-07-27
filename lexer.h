@@ -1,6 +1,8 @@
 #pragma once
 #include "token.h"
 
+struct status_t;
+
 #ifdef DEBUG_LEXER
 #define debug_lexer(x) x
 #else
@@ -13,7 +15,7 @@ public:
 	lexer_t(atom filename, std::istream &is);
 	~lexer_t();
 
-	bool get_token(token_t &token, std::vector<token_t> *comments);
+	void get_token(status_t &status, token_t &token, std::vector<token_t> *comments);
 
 private:
 	void reset_token();

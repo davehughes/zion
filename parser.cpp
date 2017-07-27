@@ -57,15 +57,23 @@ using namespace ast;
 
 
 ptr<const var_decl_t> var_decl_t::parse(parse_state_t &ps) {
+	bool constant = ps.token.is_ident(K(const));
+	ps.advance();
 	expect_token(tk_identifier);
 
 	auto var_decl = create<ast::var_decl_t>(ps.token);
-	eat_token();
+	var_decl->constant = constant;
+	ps.advance();
 
 	chomp_token(tk_assign);
 
 	var_decl->initializer = expression_t::parse(ps);
-	return var_decl;
+	if (!!ps.status) {
+		return var_decl;
+	}
+
+	assert(!ps.status);
+	return nullptr;
 }
 
 ptr<const return_statement_t> return_statement_t::parse(parse_state_t &ps) {
@@ -115,8 +123,7 @@ ptr<const item_t> link_statement_parse(parse_state_t &ps) {
 ptr<const statement_t> statement_t::parse(parse_state_t &ps) {
 	assert(ps.token.tk != tk_rcurly);
 
-	if (ps.token.is_ident(K(var))) {
-		ps.advance();
+	if (ps.token.is_ident(K(var)) || ps.token.is_ident(K(const))) {
 		return var_decl_t::parse(ps);
 	} else if (ps.token.is_ident(K(set))) {
 		return assignment_t::parse(ps);
@@ -312,11 +319,14 @@ ptr<const expression_t> literal_expr_t::parse(parse_state_t &ps) {
 ptr<const statement_t> assignment_t::parse(parse_state_t &ps) {
 	chomp_ident(K(set));
 	expect_token(tk_identifier);
-	auto var_decl = create<ast::var_decl_t>(ps.token);
+	auto assignment = create<ast::assignment_t>(ps.token);
 	expect_token(tk_assign);
-	var_decl->initializer = expression_t::parse(ps);
+	assignment->lhs = reference_expr_t::parse(ps);
 	if (!!ps.status) {
-		return var_decl;
+		assignment->rhs = expression_t::parse(ps);
+		if (!!ps.status) {
+			return assignment;
+		}
 	}
 
 	assert(!ps.status);

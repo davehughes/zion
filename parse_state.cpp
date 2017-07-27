@@ -17,10 +17,12 @@ parse_state_t::parse_state_t(
 	advance();
 }
 
-bool parse_state_t::advance() {
+void parse_state_t::advance() {
 	debug_lexer(log(log_info, "advanced from %s %s", tkstr(token.tk), token.text.c_str()[0] != '\n' ? token.text.c_str() : ""));
 	prior_token = token;
-	return lexer.get_token(token, comments);
+	if (!!status) {
+		lexer.get_token(status, token, comments);
+	}
 }
 
 void parse_state_t::warning(const char *format, ...) {

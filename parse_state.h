@@ -22,7 +22,7 @@ struct parse_state_t {
 			lexer_t &lexer,
 			std::vector<token_t> *comments=nullptr);
 
-	bool advance();
+	void advance();
 	void warning(const char *format, ...);
 	void error(const char *format, ...);
 
