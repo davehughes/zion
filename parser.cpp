@@ -149,7 +149,7 @@ ptr<const statement_t> statement_t::parse(parse_state_t &ps) {
 		eat_token();
 		return std::move(break_flow);
 	} else {
-		ps.error("unexpected token");
+		ps.error("unexpected token %s", ps.token.text.c_str());
 		return nullptr;
 	}
 }
@@ -320,12 +320,11 @@ ptr<const expression_t> literal_expr_t::parse(parse_state_t &ps) {
 }
 
 ptr<const statement_t> assignment_t::parse(parse_state_t &ps) {
-	chomp_ident(K(set));
-	expect_token(tk_identifier);
 	auto assignment = create<ast::assignment_t>(ps.token);
-	expect_token(tk_assign);
+	chomp_ident(K(set));
 	assignment->lhs = reference_expr_t::parse(ps);
 	if (!!ps.status) {
+		chomp_token(tk_assign);
 		assignment->rhs = expression_t::parse(ps);
 		if (!!ps.status) {
 			return assignment;

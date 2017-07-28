@@ -1696,7 +1696,7 @@ void ast::assignment_t::resolve_statement(
         local_scope_t::ref *new_scope,
 		bool *returns) const
 {
-	assert(token.text == "=");
+	assert(token.text == K(set));
 
 	auto lhs_var = lhs->resolve_expression(status, builder, scope, life);
 	if (!!status) {
