@@ -326,7 +326,6 @@ bound_var_t::ref type_check_bound_var_decl(
 		life_t::ref life,
 		bool maybe_unbox)
 {
-#if 0
 	const atom symbol = obj.get_symbol();
 
 	debug_above(4, log(log_info, "type_check_var_decl is looking for a type for variable " c_var("%s") " : %s",
@@ -339,19 +338,17 @@ bound_var_t::ref type_check_bound_var_decl(
 	}
 
 	if (!!status) {
-		assert(obj.get_type() != nullptr);
-
 		/* 'declared_type' tells us the user-declared type on the left-hand side of
 		 * the assignment. this is generally used to allow a variable to be more
 		 * generalized than the specific right-hand side initial value might be. */
-		types::type_t::ref declared_type = obj.get_type()->rebind(scope->get_type_variable_bindings());
+		types::type_t::ref declared_type = obj.declared_type;
 
 		assert(dyncast<runnable_scope_t>(scope) != nullptr);
 
 		return generate_stack_variable(status, builder, scope, life,
 				obj, symbol, declared_type, maybe_unbox);
 	}
-#endif
+
 	assert(!status);
 	return nullptr;
 }
@@ -601,17 +598,6 @@ bound_var_t::ref ast::callsite_expr_t::resolve_expression(
 		scope_t::ref scope,
 		life_t::ref life) const
 {
-	return null_impl();
-}
-
-void ast::callsite_expr_t::resolve_statement(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		scope_t::ref scope,
-		life_t::ref life,
-		local_scope_t::ref *new_scope,
-		bool *returns) const
-{
 	/* get the value of calling a function */
 	bound_type_t::refs param_types;
 	bound_var_t::refs arguments;
@@ -627,17 +613,17 @@ void ast::callsite_expr_t::resolve_statement(
 					user_message(log_info, status, param->get_location(),
 							"%s : %s", param->str().c_str(),
 							param_var->type->str().c_str());
-					return;
+					return nullptr;
 				}
 
 				assert(!status);
-				return;
+				return nullptr;
 			} else {
 				user_error(status, get_location(),
 					   	"static_print requires one and only one parameter");
 
 				assert(!status);
-				return;
+				return nullptr;
 			}
 		}
 	}
@@ -669,19 +655,37 @@ void ast::callsite_expr_t::resolve_statement(
 			if (!!status) {
 				debug_above(5, log(log_info, "function chosen is %s", function->str().c_str()));
 
-				/* call_value = */ make_call_value(status, builder, get_location(), scope,
+				return make_call_value(status, builder, get_location(), scope,
 						life, function, arguments);
-				return;
 			}
 		} else {
 			user_error(status, function_expr->get_location(),
 					"%s being called like a function. arguments are %s",
 					function_expr->str().c_str(),
 					::str(arguments).c_str());
-			return;
 		}
 	}
 
+	assert(!status);
+	return nullptr;
+}
+
+void ast::callsite_expr_t::resolve_statement(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		scope_t::ref scope,
+		life_t::ref life,
+		local_scope_t::ref *new_scope,
+		bool *returns) const
+{
+	auto return_value = resolve_expression(status, builder, scope, life);
+	if (!!status) {
+		if (return_value->get_signature().repr() != "void") {
+			user_error(status, token.location, "call statement must have void return value");
+		} else {
+			return;
+		}
+	}
 
 	assert(!status);
 	return;

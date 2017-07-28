@@ -65,11 +65,14 @@ ptr<const var_decl_t> var_decl_t::parse(parse_state_t &ps) {
 	var_decl->constant = constant;
 	ps.advance();
 
-	chomp_token(tk_assign);
-
-	var_decl->initializer = expression_t::parse(ps);
+	var_decl->declared_type = parse_type_ref(ps);
 	if (!!ps.status) {
-		return var_decl;
+		chomp_token(tk_assign);
+
+		var_decl->initializer = expression_t::parse(ps);
+		if (!!ps.status) {
+			return var_decl;
+		}
 	}
 
 	assert(!ps.status);

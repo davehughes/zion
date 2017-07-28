@@ -282,6 +282,7 @@ namespace ast {
 				life_t::ref life) const;
 		/* the inherited ast::item::token member contains the actual identifier
 		 * name */
+		types::type_t::ref      declared_type;
 		ptr<const expression_t> initializer;
 		bool constant;
 	};
