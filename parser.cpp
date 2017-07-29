@@ -473,15 +473,15 @@ ptr<const match_block_t> match_block_t::parse(parse_state_t &ps) {
 
 ptr<const pattern_block_t> pattern_block_t::parse(parse_state_t &ps) {
 	expect_token(tk_identifier);
-	auto type_token = ps.token;
-	chomp_token(tk_colon);
-	chomp_token(tk_lcurly);
-	auto pattern_block = ast::create<ast::pattern_block_t>(type_token);
-
-	auto block = block_t::parse(ps);
+	auto pattern_block = ast::create<ast::pattern_block_t>(ps.token);
+	pattern_block->type_match = parse_type_ref(ps);
 	if (!!ps.status) {
-		pattern_block->block = block;
-		return pattern_block;
+		chomp_token(tk_colon);
+		auto block = block_t::parse(ps);
+		if (!!ps.status) {
+			pattern_block->block = block;
+			return pattern_block;
+		}
 	}
 
 	assert(!ps.status);
@@ -642,7 +642,6 @@ type_decl_t::ref type_decl_t::parse(parse_state_t &ps, token_t name_token) {
 
 ptr<const user_defined_type_t> user_defined_type_t::parse(parse_state_t &ps) {
 	chomp_ident(K(type));
-	ps.advance();
 	expect_token(tk_identifier);
 	auto type_name = ps.token;
 	ps.advance();
@@ -789,7 +788,7 @@ ptr<const module_t> module_t::parse(parse_state_t &ps) {
 
 		if (ps.token.tk != tk_none) {
 			if (!!ps.status) {
-				ps.error("unexpected " c_internal("%s") "'" c_error("%s") "' at top-level module scope",
+				ps.error("unexpected " c_internal("%s") " '" c_error("%s") "' at top-level module scope",
 						tkstr(ps.token.tk), ps.token.text.c_str());
 			}
 		}

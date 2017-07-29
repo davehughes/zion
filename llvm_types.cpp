@@ -36,7 +36,7 @@ bound_type_t::ref create_managed_ptr_type(
 				managed_ptr->element_type->str().c_str()));
 	llvm::StructType *llvm_type = llvm::StructType::create(
 			builder.getContext(),
-			managed_ptr->element_type->get_signature().str());
+			managed_ptr->element_type->get_signature());
 	assert(!llvm_type->isSized());
 	assert(llvm_type->isOpaque());
 
@@ -54,7 +54,7 @@ bound_type_t::ref create_native_ptr_type(
 				native_ptr->element_type->str().c_str()));
 	llvm::StructType *llvm_type = llvm::StructType::create(
 			builder.getContext(),
-			native_ptr->element_type->get_signature().str());
+			native_ptr->element_type->get_signature());
 	assert(!llvm_type->isSized());
 	assert(llvm_type->isOpaque());
 
@@ -791,12 +791,13 @@ llvm::Value *llvm_call_allocator(
 						llvm_print(llvm_dim_offsets).c_str()));
 
 			auto signature = data_type->get_signature();
+			auto iatom = atom{signature}.iatom;
 			debug_above(5, log(log_info, "mapping type " c_type("%s") " to typeid %d",
-						signature.str().c_str(), signature.repr().iatom));
+						signature.c_str(), iatom));
 
 			std::vector<llvm::Constant *> llvm_type_info_data({
 						/* the type_id */
-						builder.getInt32(signature.repr().iatom),
+						builder.getInt32(iatom),
 
 						/* the number of contained references */
 						builder.getInt16(llvm_offsets.size()),
@@ -818,7 +819,7 @@ llvm::Value *llvm_call_allocator(
 			check_struct_initialization(llvm_type_info_initializer, llvm_type_info_type);
 
 			llvm_type_info = llvm_get_global(
-					llvm_module, string_format("__type_info_%s", signature.repr().c_str()),
+					llvm_module, string_format("__type_info_%s", signature.c_str()),
 					llvm::ConstantStruct::get(llvm_type_info_type,
 						llvm_type_info_data),
 					true /*is_constant*/);

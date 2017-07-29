@@ -165,17 +165,17 @@ void ast::struct_t::register_type(
 
 	auto type_name = get_type_name();
 
-	if (auto found_type = scope->get_bound_type(type_name->get_name())) {
+	if (auto found_type = scope->get_bound_type(type_name)) {
 		/* simple check for an already bound monotype */
 		user_error(status, get_location(),
 			   	"symbol " c_id("%s") " was already defined",
-				type_name->get_name().c_str());
+				type_name.c_str());
 		user_message(log_warning, status, found_type->get_location(),
 				"previous version of %s defined here",
 				found_type->str().c_str());
 	} else {
 		auto env = scope->get_typename_env();
-		auto env_iter = env.find(type_name->get_name());
+		auto env_iter = env.find(type_name);
 		if (env_iter == env.end()) {
 			/* instantiate_data_ctor_type has the side-effect of creating an
 			 * unchecked data ctor for the type */

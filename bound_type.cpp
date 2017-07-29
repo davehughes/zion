@@ -191,11 +191,11 @@ bool bound_type_t::is_managed() const {
 	if (dyncast<const types::type_raw_pointer_t>(type) != nullptr) {
 		return false;
 	} else {
-		return is_managed_type_name(type->repr().str());
+		return is_managed_type_name(type->repr());
 	}
 }
 
-types::signature bound_type_t::get_signature() const {
+std::string bound_type_t::get_signature() const {
 	return get_type()->get_signature();
 }
 

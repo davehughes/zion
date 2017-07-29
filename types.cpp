@@ -47,7 +47,7 @@ namespace types {
 	   	return string_format(c_type("%s"), this->repr(bindings).c_str());
    	}
 
-	atom type_t::repr(const map &bindings) const {
+	std::string type_t::repr(const map &bindings) const {
 		std::stringstream ss;
 		emit(ss, bindings);
 		return ss.str();
@@ -65,7 +65,7 @@ namespace types {
 		return 0;
 	}
 
-    atom::set type_id_t::get_ftvs() const {
+	std::set<std::string> type_id_t::get_ftvs() const {
         return {};
     }
 
@@ -115,7 +115,7 @@ namespace types {
 		return 1;
 	}
 
-    atom::set type_variable_t::get_ftvs() const {
+	std::set<std::string> type_variable_t::get_ftvs() const {
         return {id->get_name()};
     }
 
@@ -156,9 +156,9 @@ namespace types {
 		return oper->ftv_count() + operand->ftv_count();
 	}
 
-    atom::set type_operator_t::get_ftvs() const {
-        atom::set oper_set = oper->get_ftvs();
-        atom::set operand_set = operand->get_ftvs();
+	std::set<std::string> type_operator_t::get_ftvs() const {
+        auto oper_set = oper->get_ftvs();
+        auto operand_set = operand->get_ftvs();
         oper_set.insert(operand_set.begin(), operand_set.end());
         return oper_set;
     }
@@ -216,10 +216,10 @@ namespace types {
 		return ftv_sum;
 	}
 
-	atom::set type_struct_t::get_ftvs() const {
-		atom::set set;
+	std::set<std::string> type_struct_t::get_ftvs() const {
+		std::set<std::string> set;
 		for (auto dimension : dimensions) {
-			atom::set dim_set = dimension->get_ftvs();
+			auto dim_set = dimension->get_ftvs();
 			set.insert(dim_set.begin(), dim_set.end());
 		}
 		return set;
@@ -297,10 +297,10 @@ namespace types {
 		return ftv_sum;
 	}
 
-	atom::set type_args_t::get_ftvs() const {
-		atom::set set;
+	std::set<std::string> type_args_t::get_ftvs() const {
+		std::set<std::string> set;
 		for (auto arg : args) {
-			atom::set dim_set = arg->get_ftvs();
+			auto dim_set = arg->get_ftvs();
 			set.insert(dim_set.begin(), dim_set.end());
 		}
 		return set;
@@ -361,7 +361,7 @@ namespace types {
 		return element_type->ftv_count();
 	}
 
-	atom::set type_managed_ptr_t::get_ftvs() const {
+	std::set<std::string> type_managed_ptr_t::get_ftvs() const {
 		return element_type->get_ftvs();
     }
 
@@ -412,7 +412,7 @@ namespace types {
 		return element_type->ftv_count();
 	}
 
-	atom::set type_native_ptr_t::get_ftvs() const {
+	std::set<std::string> type_native_ptr_t::get_ftvs() const {
 		return element_type->get_ftvs();
     }
 
@@ -463,7 +463,7 @@ namespace types {
 		return module_type->ftv_count();
 	}
 
-	atom::set type_module_t::get_ftvs() const {
+	std::set<std::string> type_module_t::get_ftvs() const {
 		return module_type->get_ftvs();
     }
 
@@ -504,12 +504,15 @@ namespace types {
 		return args->ftv_count() + return_type->ftv_count();
 	}
 
-	atom::set type_function_t::get_ftvs() const {
-		atom::set set;
-		atom::set args_ftvs = args->get_ftvs();
+	std::set<std::string> type_function_t::get_ftvs() const {
+		std::set<std::string> set;
+
+		auto args_ftvs = args->get_ftvs();
 		set.insert(args_ftvs.begin(), args_ftvs.end());
-		atom::set return_type_ftvs = return_type->get_ftvs();
+
+		auto return_type_ftvs = return_type->get_ftvs();
 		set.insert(return_type_ftvs.begin(), return_type_ftvs.end());
+
 		return set;
     }
 
@@ -562,10 +565,10 @@ namespace types {
 		return ftv_sum;
 	}
 
-    atom::set type_sum_t::get_ftvs() const {
-        atom::set set;
+	std::set<std::string> type_sum_t::get_ftvs() const {
+		std::set<std::string> set;
 		for (auto option : options) {
-            atom::set option_set = option->get_ftvs();
+            auto option_set = option->get_ftvs();
             set.insert(option_set.begin(), option_set.end());
 		}
 		return set;
@@ -609,7 +612,7 @@ namespace types {
         return just->ftv_count();
 	}
 
-    atom::set type_maybe_t::get_ftvs() const {
+	std::set<std::string> type_maybe_t::get_ftvs() const {
         return just->get_ftvs();
 	}
 
@@ -644,7 +647,7 @@ namespace types {
 		return raw->ftv_count();
 	}
 
-	atom::set type_raw_pointer_t::get_ftvs() const {
+	std::set<std::string> type_raw_pointer_t::get_ftvs() const {
 		return raw->get_ftvs();
 	}
 
@@ -688,7 +691,7 @@ namespace types {
 		return body->rebind(bindings)->ftv_count();
 	}
 
-    atom::set type_lambda_t::get_ftvs() const {
+	std::set<std::string> type_lambda_t::get_ftvs() const {
 		assert(!"This should not really get called ....");
 		map bindings;
 		bindings[binding->get_name()] = type_unreachable();

@@ -9,7 +9,6 @@
 #include <unordered_map>
 #include "bound_type.h"
 #include "var.h"
-#include "signature.h"
 
 struct bound_var_t : public var_t {
 	bound_var_t() = delete;
@@ -57,11 +56,11 @@ public:
 	bool is_global() const;
 	bool is_int() const;
 	bool is_pointer() const;
-	types::signature get_signature() const;
+	std::string get_signature() const;
 
 	typedef ptr<const bound_var_t> ref;
 	typedef std::vector<ref> refs;
-	typedef std::map<types::signature, ref> overloads;
+	typedef std::map<std::string, ref> overloads;
 	typedef std::weak_ptr<bound_var_t> weak_ref;
 	typedef std::map<atom, overloads> map;
 

@@ -7,7 +7,6 @@
 #include <set>
 #include "unchecked_type.h"
 #include "unchecked_var.h"
-#include "signature.h"
 
 extern const token_kind_t SCOPE_TK;
 extern const char *SCOPE_SEP;
@@ -45,7 +44,7 @@ struct scope_t : public std::enable_shared_from_this<scope_t> {
 
 	virtual bound_var_t::ref get_bound_variable(status_t &status, location_t location, atom symbol) = 0;
 	virtual void put_bound_variable(status_t &status, atom symbol, bound_var_t::ref bound_variable) = 0;
-	virtual bound_type_t::ref get_bound_type(types::signature signature) = 0;
+	virtual bound_type_t::ref get_bound_type(std::string type_name) = 0;
 	virtual std::string get_name() const;
 	virtual std::string make_fqn(std::string leaf_name) const = 0;
 	virtual llvm::Module *get_llvm_module();
@@ -60,7 +59,7 @@ struct scope_t : public std::enable_shared_from_this<scope_t> {
     /* There are mappings based on type declarations stored in the env */
 	virtual types::type_t::map get_typename_env() const = 0;
 
-    virtual void put_typename(status_t &status, atom name, types::type_t::ref expansion) = 0;
+    virtual void put_typename(status_t &status, std::string name, types::type_t::ref expansion) = 0;
 };
 
 template <typename BASE>
@@ -89,7 +88,7 @@ struct scope_impl_t : public BASE {
 	bound_var_t::ref get_singleton(atom name);
 	bound_var_t::ref get_bound_variable(status_t &status, location_t location, atom symbol);
 	std::string make_fqn(std::string leaf_name) const;
-	bound_type_t::ref get_bound_type(types::signature signature);
+	bound_type_t::ref get_bound_type(std::string type_name);
 	void get_callables(atom symbol, var_t::refs &fns);
     virtual void put_typename(status_t &status, atom name, types::type_t::ref expansion);
     virtual void put_type_variable_binding(status_t &status, atom binding, types::type_t::ref type);
@@ -231,9 +230,9 @@ struct program_scope_t : public module_scope_impl_t {
 
 	unchecked_var_t::ref put_unchecked_variable(atom symbol, unchecked_var_t::ref unchecked_variable);
 
-	virtual bound_type_t::ref get_bound_type(types::signature signature);
+	virtual bound_type_t::ref get_bound_type(std::string type_name);
 	void put_bound_type(status_t &status, bound_type_t::ref type);
-	void put_bound_type_mapping(status_t &status, types::signature source, types::signature dest);
+	void put_bound_type_mapping(status_t &status, std::string source, std::string dest);
 
 	unchecked_var_t::map unchecked_vars;
 
@@ -242,7 +241,7 @@ struct program_scope_t : public module_scope_impl_t {
 private:
 	module_scope_t::map modules;
 	bound_type_t::map bound_types;
-	std::map<types::signature, types::signature> bound_type_mappings;
+	std::map<std::string, std::string> bound_type_mappings;
 
 	/* let code look at the ordered list for iteration purposes */
 	unchecked_var_t::refs unchecked_vars_ordered;
@@ -298,7 +297,11 @@ ptr<program_scope_t> scope_impl_t<T>::get_program_scope() {
 }
 
 template <typename T>
-void scope_impl_t<T>::put_typename(status_t &status, atom type_name, types::type_t::ref expansion) {
+void scope_impl_t<T>::put_typename(
+		status_t &status,
+		std::string type_name,
+		types::type_t::ref expansion)
+{
 #ifdef DEBUG
 	/* make sure that all type_names come in fully qualified */
 	int slash_count = 0;
@@ -386,7 +389,7 @@ void scope_impl_t<T>::put_bound_variable(
 				this->get_name().c_str()));
 
 	auto &resolve_map = bound_vars[symbol];
-	types::signature signature = bound_variable->get_signature();
+	auto signature = bound_variable->get_signature();
 	auto existing_bound_var_iter = resolve_map.find(signature);
 	if (existing_bound_var_iter != resolve_map.end()) {
 		auto existing_bound_var = existing_bound_var_iter->second;
@@ -479,12 +482,12 @@ bound_var_t::ref scope_impl_t<T>::get_bound_variable(
 }
 
 bound_type_t::ref get_bound_type_from_scope(
-		types::signature signature,
+		std::string type_name,
 		program_scope_t::ref program_scope);
 
 template <typename T>
-bound_type_t::ref scope_impl_t<T>::get_bound_type(types::signature signature) {
-	return get_bound_type_from_scope(signature, this->get_program_scope());
+bound_type_t::ref scope_impl_t<T>::get_bound_type(std::string type_name) {
+	return get_bound_type_from_scope(type_name, this->get_program_scope());
 }
 
 void get_callables_from_bound_vars(

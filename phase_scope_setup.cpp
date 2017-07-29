@@ -41,12 +41,10 @@ void scope_setup_type_def(
 	   	const ptr<const ast::user_defined_type_t> &udt,
 	   	ptr<module_scope_t> module_scope)
 {
-	identifier::ref id = udt->get_type_name();
-	assert(id->get_name().size() != 0);
-
+	std::string fqn = module_scope->make_fqn(udt->get_type_name());
 	module_scope->put_unchecked_type(
 			status,
-			unchecked_type_t::create(id, udt, module_scope));
+			unchecked_type_t::create(fqn, udt, module_scope));
 }
 
 status_t scope_setup_module(compiler_t &compiler, const ast::module_t::ref &module) {

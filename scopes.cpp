@@ -48,20 +48,20 @@ bound_var_t::ref get_bound_variable_from_scope(
 }
 
 bound_type_t::ref get_bound_type_from_scope(
-		types::signature signature,
+		std::string type_name,
 		program_scope_t::ref program_scope)
 {
 	indent_logger indent(8, string_format("checking whether %s is bound...",
-				signature.str().c_str()));
-	auto bound_type = program_scope->get_bound_type(signature);
+				type_name.c_str()));
+	auto bound_type = program_scope->get_bound_type(type_name);
 	if (bound_type != nullptr) {
 		debug_above(8, log(log_info, "yep. %s is bound to %s",
-					signature.str().c_str(),
+					type_name.c_str(),
 					bound_type->str().c_str()));
 		return bound_type;
 	} else {
 		debug_above(8, log(log_info, "nope. %s is not yet bound",
-					signature.str().c_str()));
+					type_name.c_str()));
 		return nullptr;
 	}
 }
@@ -114,24 +114,23 @@ llvm::Module *scope_t::get_llvm_module() {
 	}
 }
 
-bound_type_t::ref program_scope_t::get_bound_type(types::signature signature) {
+bound_type_t::ref program_scope_t::get_bound_type(std::string type_name) {
 	indent_logger indent(9, string_format("checking program scope whether %s is bound...",
-				signature.str().c_str()));
-	auto iter = bound_types.find(signature);
+				type_name.c_str()));
+	auto iter = bound_types.find(type_name);
 	if (iter != bound_types.end()) {
 		debug_above(9, log(log_info, "yep. %s is bound to %s",
-					signature.str().c_str(),
+					type_name.c_str(),
 					iter->second->str().c_str()));
 		return iter->second;
 	} else {
-		auto dest_iter = bound_type_mappings.find(signature);
+		auto dest_iter = bound_type_mappings.find(type_name);
 		if (dest_iter != bound_type_mappings.end()) {
 			return get_bound_type(dest_iter->second);
 		}
 	}
 
-	debug_above(9, log(log_info, "nope. %s is not yet bound",
-				signature.str().c_str()));
+	debug_above(9, log(log_info, "nope. %s is not yet bound", type_name.c_str()));
 	return nullptr;
 }
 
@@ -432,25 +431,25 @@ void module_scope_impl_t::put_unchecked_type(
 		status_t &status,
 		unchecked_type_t::ref unchecked_type)
 {
-	assert(unchecked_type->id->get_name().str().find(SCOPE_SEP) != std::string::npos);
 	debug_above(6, log(log_info, "registering an unchecked type %s",
 				unchecked_type->str().c_str()));
+	assert(unchecked_type->name.find(SCOPE_SEP) != std::string::npos);
 
-	auto unchecked_type_iter = unchecked_types.find(unchecked_type->id->get_name());
+	auto unchecked_type_iter = unchecked_types.find(unchecked_type->name);
 
 	if (unchecked_type_iter == unchecked_types.end()) {
-		unchecked_types.insert({unchecked_type->id->get_name(), unchecked_type});
+		unchecked_types.insert({unchecked_type->name, unchecked_type});
 
 		/* also keep an ordered list of the unchecked types */
 		unchecked_types_ordered.push_back(unchecked_type);
 	} else {
 		/* this unchecked type already exists */
-		user_error(status, unchecked_type->node, "type %s already exists",
-				unchecked_type->id->str().c_str());
+		user_error(status, unchecked_type->node, "type " c_type("%s") " already exists",
+				unchecked_type->name.c_str());
 
 		user_error(status, unchecked_type_iter->second->node,
-				"see type %s declaration",
-				unchecked_type_iter->second->id->str().c_str());
+				"see type " c_type("%s") " declaration",
+				unchecked_type_iter->second->name.c_str());
 	}
 }
 
@@ -528,23 +527,23 @@ unchecked_var_t::ref program_scope_t::put_unchecked_variable(
 
 void program_scope_t::put_bound_type_mapping(
 		status_t &status,
-	   	types::signature source,
-	   	types::signature dest)
+	   	std::string source,
+	   	std::string dest)
 {
 	auto dest_iter = bound_type_mappings.find(source);
 	if (dest_iter == bound_type_mappings.end()) {
 		bound_type_mappings.insert({source, dest});
 	} else {
-		user_error(status, INTERNAL_LOC(), "bound type mapping %s already exists!",
-				source.str().c_str());
+		user_error(status, INTERNAL_LOC(), "bound type mapping " c_type("%s") " already exists!",
+				source.c_str());
 	}
 }
 
 void program_scope_t::put_bound_type(status_t &status, bound_type_t::ref type) {
 	debug_above(5, log(log_info, "binding type %s as " c_id("%s"),
 				type->str().c_str(),
-				type->get_signature().repr().c_str()));
-	atom signature = type->get_signature().repr();
+				type->get_signature().c_str()));
+	auto signature = type->get_signature();
 	auto iter = bound_types.find(signature);
 	if (iter == bound_types.end()) {
 		bound_types[signature] = type;

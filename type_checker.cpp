@@ -680,7 +680,7 @@ void ast::callsite_expr_t::resolve_statement(
 {
 	auto return_value = resolve_expression(status, builder, scope, life);
 	if (!!status) {
-		if (return_value->get_signature().repr() != "void") {
+		if (return_value->get_signature() != "void") {
 			user_error(status, token.location, "call statement must have void return value");
 		} else {
 			return;
@@ -1179,11 +1179,12 @@ bound_var_t::ref call_typeid(
 					{resolved_value});
 		}
 	} else {
+		auto iatom = atom{resolved_value->type->get_type()->get_signature()}.iatom;
 		return bound_var_t::create(
 				INTERNAL_LOC(),
 				string_format("typeid(%s)", resolved_value->str().c_str()),
 				program_scope->get_bound_type({TYPEID_TYPE}),
-				llvm_create_int32(builder, resolved_value->type->get_type()->get_signature().iatom),
+				llvm_create_int32(builder, iatom),
 				id,
 				false/*is_lhs*/, false /*is_global*/);
 	}

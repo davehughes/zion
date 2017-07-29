@@ -227,7 +227,7 @@ namespace ast {
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref scope) const = 0;
-		virtual identifier::ref get_type_name() const = 0;
+		virtual std::string get_type_name() const = 0;
 		virtual types::type_t::ref get_type() const = 0;
 	};
 
@@ -240,7 +240,7 @@ namespace ast {
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref scope) const;
-		virtual identifier::ref get_type_name() const;
+		virtual std::string get_type_name() const;
 		virtual types::type_t::ref get_type() const;
 
 		identifier::set subtypes;
@@ -255,7 +255,7 @@ namespace ast {
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				scope_t::ref scope) const;
-		virtual identifier::ref get_type_name() const;
+		virtual std::string get_type_name() const;
 		virtual types::type_t::ref get_type() const;
 
 		std::vector<dimension_t::ref> dimensions;
@@ -398,7 +398,7 @@ namespace ast {
 				refs::const_iterator end_iter,
 				ptr<const block_t> else_block) const;
 		
-		identifier::ref get_type_name() const { return make_code_id(token); }
+		types::type_t::ref type_match;
 		ptr<const block_t> block;
 	};
 

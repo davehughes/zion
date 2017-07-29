@@ -28,17 +28,17 @@ const char *tkstr(token_kind_t tk) {
 	tk_case(hat);
 	tk_case(identifier);
 	tk_case(integer);
-	tk_case(lcurly);
-	tk_case(lparen);
-	tk_case(lsquare);
 	tk_case(none);
-	tk_case(question);
-	tk_case(rcurly);
-	tk_case(rparen);
-	tk_case(rsquare);
-	tk_case(semicolon);
-	tk_case(star);
 	tk_case(string);
+	case tk_lcurly: return "{";
+	case tk_rcurly: return "}";
+	case tk_lparen: return "(";
+	case tk_rparen: return ")";
+	case tk_lsquare: return "[";
+	case tk_rsquare: return "]";
+	case tk_question: return "?";
+	case tk_semicolon: return ":";
+	case tk_star: return "*";
 	}
 	return "";
 }
