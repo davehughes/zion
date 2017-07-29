@@ -105,5 +105,5 @@ add_test(
 foreach(_test_name
 		test_hello_world
 		)
-	add_test(NAME ${_test_name} COMMAND python expect.py -c ./llz -p ${_test_name})
+	add_test(NAME ${_test_name} COMMAND python expect.py --compiler /opt/bin/llz --program ${_test_name})
 endforeach(_test_name)
