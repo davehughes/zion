@@ -16,8 +16,8 @@ const char SCOPE_SEP_CHAR = '/';
 bound_var_t::ref get_bound_variable_from_scope(
 		status_t &status,
 		location_t location,
-		atom scope_name,
-		atom symbol,
+		std::string scope_name,
+		std::string symbol,
 		bound_var_t::map bound_vars,
 		scope_t::ref parent_scope)
 {
@@ -69,9 +69,9 @@ bound_type_t::ref get_bound_type_from_scope(
 std::string scope_t::get_name() const {
 	auto parent_scope = this->get_parent_scope();
 	if (parent_scope) {
-		return parent_scope->get_name() + SCOPE_SEP + get_leaf_name().str();
+		return parent_scope->get_name() + SCOPE_SEP + get_leaf_name();
 	} else {
-		return get_leaf_name().str();
+		return get_leaf_name();
 	}
 }
 
@@ -134,12 +134,12 @@ bound_type_t::ref program_scope_t::get_bound_type(std::string type_name) {
 	return nullptr;
 }
 
-function_scope_t::ref function_scope_t::create(atom module_name, scope_t::ref parent_scope) {
+function_scope_t::ref function_scope_t::create(std::string module_name, scope_t::ref parent_scope) {
 	return make_ptr<function_scope_t>(module_name, parent_scope);
 }
 
 local_scope_t::ref local_scope_t::create(
-		atom name,
+		std::string name,
 		scope_t::ref parent_scope,
 		return_type_constraint_t &return_type_constraint)
 {
@@ -147,7 +147,7 @@ local_scope_t::ref local_scope_t::create(
 }
 
 void get_callables_from_bound_vars(
-		atom symbol,
+		std::string symbol,
 		const bound_var_t::map &bound_vars,
 		var_t::refs &fns)
 {
@@ -164,7 +164,7 @@ void get_callables_from_bound_vars(
 }
 
 void get_callables_from_unchecked_vars(
-		atom symbol,
+		std::string symbol,
 		const unchecked_var_t::map &unchecked_vars,
 		var_t::refs &fns)
 {
@@ -179,16 +179,16 @@ void get_callables_from_unchecked_vars(
 	}
 }
 
-void program_scope_t::get_callables(atom symbol, var_t::refs &fns) {
+void program_scope_t::get_callables(std::string symbol, var_t::refs &fns) {
 	get_callables_from_bound_vars(symbol, bound_vars, fns);
 	get_callables_from_unchecked_vars(symbol, unchecked_vars, fns);
 }
 
-ptr<local_scope_t> function_scope_t::new_local_scope(atom name) {
+ptr<local_scope_t> function_scope_t::new_local_scope(std::string name) {
 	return local_scope_t::create(name, shared_from_this(), return_type_constraint);
 }
 
-ptr<local_scope_t> local_scope_t::new_local_scope(atom name) {
+ptr<local_scope_t> local_scope_t::new_local_scope(std::string name) {
 	return local_scope_t::create(name, shared_from_this(), return_type_constraint);
 }
 
@@ -201,7 +201,7 @@ return_type_constraint_t &local_scope_t::get_return_type_constraint() {
 }
 
 runnable_scope_t::runnable_scope_t(
-        atom name,
+        std::string name,
 		scope_t::ref parent_scope) : scope_impl_t(name, parent_scope)
 {
 }
@@ -296,7 +296,7 @@ loop_tracker_t::~loop_tracker_t() {
 }
 
 local_scope_t::local_scope_t(
-		atom name,
+		std::string name,
 		scope_t::ref parent_scope,
 		return_type_constraint_t &return_type_constraint) :
    	runnable_scope_t(name, parent_scope),
@@ -408,7 +408,7 @@ void local_scope_t::dump(std::ostream &os) const {
 }
 
 module_scope_impl_t::module_scope_impl_t(
-		atom name,
+		std::string name,
 	   	program_scope_t::ref parent_scope,
 		llvm::Module *llvm_module) :
 	scope_impl_t<module_scope_t>(name, parent_scope),
@@ -453,7 +453,7 @@ void module_scope_impl_t::put_unchecked_type(
 	}
 }
 
-unchecked_type_t::ref module_scope_impl_t::get_unchecked_type(atom symbol) {
+unchecked_type_t::ref module_scope_impl_t::get_unchecked_type(std::string symbol) {
 	auto iter = unchecked_types.find(symbol);
 	if (iter != unchecked_types.end()) {
 		return iter->second;
@@ -471,7 +471,7 @@ unchecked_var_t::refs &program_scope_t::get_unchecked_vars_ordered() {
 }
 
 unchecked_var_t::ref put_unchecked_variable_impl(
-		atom symbol,
+		std::string symbol,
 		unchecked_var_t::ref unchecked_variable,
 		unchecked_var_t::map &unchecked_vars,
 		unchecked_var_t::refs &unchecked_vars_ordered,
@@ -510,7 +510,7 @@ unchecked_var_t::ref put_unchecked_variable_impl(
 		// try to just inject it into the associated namespace
 
 		program_scope->put_unchecked_variable(
-				current_scope_name + SCOPE_SEP + symbol.str(),
+				current_scope_name + SCOPE_SEP + symbol,
 				unchecked_variable);	
 	}
 
@@ -518,7 +518,7 @@ unchecked_var_t::ref put_unchecked_variable_impl(
 }
 
 unchecked_var_t::ref program_scope_t::put_unchecked_variable(
-		atom symbol,
+		std::string symbol,
 	   	unchecked_var_t::ref unchecked_variable)
 {
 	return put_unchecked_variable_impl(symbol, unchecked_variable,
@@ -557,7 +557,7 @@ void program_scope_t::put_bound_type(status_t &status, bound_type_t::ref type) {
 }
 
 ptr<module_scope_t> program_scope_t::new_module_scope(
-		atom name,
+		std::string name,
 		llvm::Module *llvm_module)
 {
 	assert(!lookup_module(name));
@@ -584,7 +584,7 @@ std::string str(const module_scope_t::map &modules) {
 	return ss.str();
 }
 
-module_scope_t::ref program_scope_t::lookup_module(atom symbol) {
+module_scope_t::ref program_scope_t::lookup_module(std::string symbol) {
 	auto iter = modules.find(symbol);
 	if (iter != modules.end()) {
 		return iter->second;
@@ -606,7 +606,7 @@ std::string program_scope_t::dump_llvm_modules() {
 }
 
 module_scope_t::ref module_scope_impl_t::create(
-		atom name,
+		std::string name,
 		program_scope_t::ref parent_scope,
 		llvm::Module *llvm_module)
 {
@@ -617,6 +617,6 @@ llvm::Module *module_scope_impl_t::get_llvm_module() {
 	return llvm_module;
 }
 
-program_scope_t::ref program_scope_t::create(atom name, llvm::Module *llvm_module) {
+program_scope_t::ref program_scope_t::create(std::string name, llvm::Module *llvm_module) {
 	return make_ptr<program_scope_t>(name, llvm_module);
 }

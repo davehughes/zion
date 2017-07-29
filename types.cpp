@@ -22,11 +22,11 @@ bool is_managed_type_name(std::string type_name) {
 	return !starts_with(type_name, "__") && type_name != "void";
 }
 
-atom get_name_from_index(const types::name_index_t &name_index, int i) {
-	atom name;
+std::string get_name_from_index(const types::name_index_t &name_index, int i) {
+	std::string name;
 	for (auto name_pair : name_index) {
 		if (name_pair.second == i) {
-			assert(!name);
+			assert(name.size() == 0 && "duplicate name found in index");
 			name = name_pair.first;
 		}
 	}
@@ -280,7 +280,7 @@ namespace types {
 		for (auto arg : args) {
 			os << sep;
 			auto name = get_name_from_index(name_index, i++);
-			if (!!name) {
+			if (name.size() != 0) {
 				os << name << " ";
 			}
 			arg->emit(os, bindings);
@@ -719,7 +719,7 @@ namespace types {
 		return nullptr;
 	}
 
-	bool is_type_id(type_t::ref type, atom type_name) {
+	bool is_type_id(type_t::ref type, std::string type_name) {
 		if (auto pti = dyncast<const types::type_id_t>(type)) {
 			return pti->id->get_name() == type_name;
 		}
@@ -817,7 +817,7 @@ types::type_t::ref type_sum_safe(status_t &status, types::type_t::refs options) 
 		
 		/* check for disallowed types */
 		if (auto id_type = dyncast<const types::type_id_t>(option)) {
-			auto type_name = id_type->id->get_name().str();
+			auto type_name = id_type->id->get_name();
 			if (!is_managed_type_name(type_name)) {
 				user_error(status, option->get_location(),
 						"builtin type %s cannot be included in a sum type",
@@ -1035,7 +1035,7 @@ std::ostream &join_dimensions(std::ostream &os, const types::type_t::refs &dimen
 	for (auto dimension : dimensions) {
 		os << sep;
 		auto name = get_name_from_index(name_index, i++);
-		if (!!name) {
+		if (name.size() != 0) {
 			os << name << " ";
 		}
 		dimension->emit(os, bindings);

@@ -9,7 +9,7 @@
 #include "json_lexer.h"
 #include "status.h"
 
-lexer_t::lexer_t(atom filename, std::istream &is)
+lexer_t::lexer_t(std::string filename, std::istream &is)
 	: m_filename(filename), m_is(is)
 {
 }

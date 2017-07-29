@@ -4,8 +4,64 @@
 #include <iostream>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include "utils.h"
 
+struct atom_t {
+	typedef std::unordered_set<atom_t> set;
+	typedef std::vector<atom_t> many;
+
+	template <typename T>
+	using map = std::map<atom_t, T>;
+
+	atom_t() : iatom(0) {}
+	atom_t(std::string &&str);
+	atom_t(const std::string &str);
+	atom_t(const char *str);
+
+	atom_t &operator =(std::string &&rhs);
+	atom_t &operator =(const std::string &rhs);
+	atom_t &operator =(const char *rhs);
+	atom_t &operator =(const atom_t &);
+
+	bool operator ==(int) const = delete;
+	bool operator ==(const atom_t rhs) const { return iatom == rhs.iatom; }
+	bool operator !=(const atom_t rhs) const { return iatom != rhs.iatom; }
+	bool operator  <(const atom_t rhs) const { return iatom  < rhs.iatom; }
+	bool operator ! () const               { return iatom == 0; }
+	atom_t operator + (const atom_t rhs) const;
+
+	const char *c_str() const;
+	const std::string str() const;
+	size_t size() const;
+
+	int iatom;
+
+private:
+	std::string value;
+};
+
+namespace std {
+	template <>
+	struct hash<atom_t> {
+		int operator ()(atom_t s) const {
+			return 1301081 * s.iatom;
+		}
+	};
+}
+
+inline std::ostream &operator <<(std::ostream &os, atom_t value) {
+	return os << value.str();
+}
+
+inline std::string operator +(const std::string &lhs, const atom_t rhs) {
+	return lhs + rhs.str();
+}
+
+bool starts_with(atom_t atom_str, const std::string &search);
+
+atom_t::set to_set(atom_t::many atoms);
+void dump_atoms();
 static std::unordered_map<std::string, int> atom_str_index = {{"", 0}};
 static std::vector<std::string> atoms = {""};
 
@@ -49,65 +105,65 @@ int memoize_atom(const char *str) {
 	}
 }
 
-atom::atom(std::string &&str) : iatom(memoize_atom(str)) {
+atom_t::atom_t(std::string &&str) : iatom(memoize_atom(str)) {
 	value = str;
 }
 
-atom::atom(const std::string &str) : iatom(memoize_atom(str)) {
+atom_t::atom_t(const std::string &str) : iatom(memoize_atom(str)) {
 	value = str;
 }
 
-atom::atom(const char *str) : iatom(memoize_atom(str)) {
+atom_t::atom_t(const char *str) : iatom(memoize_atom(str)) {
 	value = str;
 }
 
 
-atom &atom::operator =(const atom &rhs) {
+atom_t &atom_t::operator =(const atom_t &rhs) {
 	iatom = rhs.iatom;
 	value = rhs.value;
 	return *this;
 }
 
-atom &atom::operator =(std::string &&rhs) {
+atom_t &atom_t::operator =(std::string &&rhs) {
 	iatom = memoize_atom(rhs);
 	value = str();
 	return *this;
 }
 
-atom &atom::operator =(const std::string &rhs) {
+atom_t &atom_t::operator =(const std::string &rhs) {
 	iatom = memoize_atom(rhs);
 	value = str();
 	return *this;
 }
 
-atom &atom::operator =(const char *rhs) {
+atom_t &atom_t::operator =(const char *rhs) {
 	iatom = memoize_atom(rhs);
 	value = str();
 	return *this;
 }
 
-atom atom::operator + (const atom rhs) const {
+atom_t atom_t::operator + (const atom_t rhs) const {
 	return {str() + rhs.str()};
 }
 
-const char *atom::c_str() const {
+const char *atom_t::c_str() const {
 	return atoms[iatom].c_str();
 }
 
-const std::string atom::str() const {
+const std::string atom_t::str() const {
 	return atoms[iatom];
 }
 
-size_t atom::size() const {
+size_t atom_t::size() const {
 	return atoms[iatom].size();
 }
 
-atom::set to_set(atom::many atoms) {
-	atom::set set;
+atom_t::set to_set(atom_t::many atoms) {
+	atom_t::set set;
 	std::for_each(
 			atoms.begin(),
 			atoms.end(),
-			[&] (atom x) {
+			[&] (atom_t x) {
 				set.insert(x);
 			});
 	return set;
@@ -118,4 +174,8 @@ void dump_atoms() {
 	for (auto a: atoms) {
 		std::cerr << i++ << ": " << a << std::endl;
 	}
+}
+
+int atomize(std::string val) {
+	return atom_t{val}.iatom;
 }

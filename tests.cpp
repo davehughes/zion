@@ -15,6 +15,7 @@
 #include "utils.h"
 #include "llvm_test.h"
 #include "llvm_utils.h"
+#include "atom.h"
 
 #define test_assert(x) if (!(x)) { \
 	log(log_error, "test_assert " c_error(#x) " failed at " c_line_ref("%s:%d"), __FILE__, __LINE__); \
@@ -672,9 +673,9 @@ auto test_descs = std::vector<test_desc>{
 	{
 		"test_atoms",
 		[] () -> bool {
-			test_assert(atom{"a"} == atom{"a"});
-			test_assert(atom{"bog"} == atom{"bog"});
-			test_assert(!(atom{"a"} == atom{"A"}));
+			test_assert(atomize("a") == atomize("a"));
+			test_assert(atomize("bog") == atomize("bog"));
+			test_assert(atomize("a") != atomize("A"));
 
 			return true;
 		}

@@ -15,7 +15,7 @@ void type_check_program(
 		const ast::program_t &obj,
 		compiler_t &compiler);
 
-bound_type_t::named_pairs zip_named_pairs(atom::many names, bound_type_t::refs args);
+bound_type_t::named_pairs zip_named_pairs(const std::vector<std::string> &names, bound_type_t::refs args);
 bound_var_t::ref call_typeid(
 		status_t &status,
 		scope_t::ref scope,

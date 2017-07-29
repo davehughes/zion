@@ -6,6 +6,7 @@
 #include "code_id.h"
 #include "logger.h"
 #include <iostream>
+#include "atom.h"
 
 bound_type_t::refs upsert_bound_types(
 		status_t &status,
@@ -75,12 +76,12 @@ bound_type_t::ref create_bound_managed_ptr_type(
 
 	assert(!scope->get_bound_type(type_managed_ptr->get_signature()));
 
-	atom::set ftvs = type_managed_ptr->get_ftvs();
+	std::set<std::string> ftvs = type_managed_ptr->get_ftvs();
 	if (ftvs.size() != 0) {
 		user_error(status, type_managed_ptr->get_location(),
 				"unable to instantiate type %s because free variables [%s] still exist",
 				type_managed_ptr->str().c_str(),
-				join_with(ftvs, ", ", [] (atom a) -> std::string {
+				join_with(ftvs, ", ", [] (std::string a) -> std::string {
 					return string_format(c_id("%s"), a.c_str());
 					}).c_str());
 		return nullptr;
@@ -707,7 +708,7 @@ llvm::Value *llvm_call_allocator(
 	   	const ast::item_t::ref &node,
 		bound_type_t::ref data_type,
 		types::type_struct_t::ref struct_type,
-		atom name,
+		std::string name,
 		bound_type_t::refs args)
 {
 	debug_above(5, log(log_info, "calling allocator for %s",
@@ -774,7 +775,7 @@ llvm::Value *llvm_call_allocator(
 			if (llvm_offsets.size() != 0) {
 				/* create the actual list of offsets */
 				llvm::Constant *llvm_dim_offsets_raw = llvm_get_global(llvm_module,
-						std::string("__dim_offsets_raw_") + name.str(),
+						std::string("__dim_offsets_raw_") + name,
 						llvm::ConstantArray::get(llvm_dim_offsets_type, llvm_offsets),
 						true /*is_constant*/);
 				debug_above(5, log(log_info, "llvm_dim_offsets_raw = %s",
@@ -791,7 +792,7 @@ llvm::Value *llvm_call_allocator(
 						llvm_print(llvm_dim_offsets).c_str()));
 
 			auto signature = data_type->get_signature();
-			auto iatom = atom{signature}.iatom;
+			auto iatom = atomize(signature);
 			debug_above(5, log(log_info, "mapping type " c_type("%s") " to typeid %d",
 						signature.c_str(), iatom));
 
@@ -806,7 +807,7 @@ llvm::Value *llvm_call_allocator(
 						llvm_dim_offsets,
 
 						/* name this variable */
-						(llvm::Constant *)builder.CreateGlobalStringPtr(name.str()),
+						(llvm::Constant *)builder.CreateGlobalStringPtr(name),
 
 						/* allocation size */
 						llvm_sizeof_tuple,
@@ -849,7 +850,7 @@ bound_var_t::ref get_or_create_tuple_ctor(
 		identifier::ref id,
 		const ast::item_t::ref &node)
 {
-	atom name = id->get_name();
+	std::string name = id->get_name();
 
 	auto program_scope = scope->get_program_scope();
 

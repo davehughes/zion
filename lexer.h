@@ -12,7 +12,7 @@ struct status_t;
 class lexer_t
 {
 public:
-	lexer_t(atom filename, std::istream &is);
+	lexer_t(std::string filename, std::istream &is);
 	~lexer_t();
 
 	void get_token(status_t &status, token_t &token, std::vector<token_t> *comments);
@@ -20,7 +20,7 @@ public:
 private:
 	void reset_token();
 
-	atom           m_filename;
+	std::string    m_filename;
 	std::istream  &m_is;
 	int            m_line=1, m_col=1;
 };

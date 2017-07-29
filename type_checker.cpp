@@ -14,6 +14,7 @@
 #include "code_id.h"
 #include "patterns.h"
 #include <iostream>
+#include "atom.h"
 
 /*
  * The basic idea here is that type checking is a graph operation which can be
@@ -30,7 +31,7 @@ bound_type_t::ref get_fully_bound_dimension(
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
 		const ast::dimension_t::ref &obj,
-		atom &var_name)
+		std::string &var_name)
 {
 	if (!!status) {
 		/* get the name of this parameter */
@@ -54,7 +55,7 @@ bound_var_t::ref generate_stack_variable(
 		scope_t::ref scope,
 		life_t::ref life,
 		const ast::var_decl_t &obj,
-		atom symbol,
+		std::string symbol,
 		types::type_t::ref declared_type,
 		bool maybe_unbox)
 {
@@ -215,7 +216,7 @@ bound_var_t::ref generate_module_variable(
 		function_scope_t::ref scope,
 		life_t::ref life,
 		const ast::var_decl_t &obj,
-		atom symbol,
+		std::string symbol,
 		types::type_t::ref declared_type)
 {
 	/* 'init_var' is keeping track of the value we are assigning to our new
@@ -273,7 +274,7 @@ bound_var_t::ref generate_module_variable(
 		if (!!status) {
 			llvm::GlobalVariable *llvm_global_variable = llvm_get_global(
 					llvm_get_module(builder),
-					symbol.str(),
+					symbol,
 					llvm_constant,
 					false /*is_constant*/);
 
@@ -326,7 +327,7 @@ bound_var_t::ref type_check_bound_var_decl(
 		life_t::ref life,
 		bool maybe_unbox)
 {
-	const atom symbol = obj.get_symbol();
+	const std::string symbol = obj.get_symbol();
 
 	debug_above(4, log(log_info, "type_check_var_decl is looking for a type for variable " c_var("%s") " : %s",
 				symbol.c_str(), obj.get_symbol().c_str()));
@@ -354,7 +355,7 @@ bound_var_t::ref type_check_bound_var_decl(
 }
 
 bound_type_t::named_pairs zip_named_pairs(
-		atom::many names,
+		std::vector<std::string> names,
 		bound_type_t::refs args)
 {
 	bound_type_t::named_pairs named_args;
@@ -374,7 +375,7 @@ void get_fully_bound_dimensions(
 {
 	if (!!status) {
 		for (auto dimension : dimensions) {
-			atom var_name;
+			std::string var_name;
 			bound_type_t::ref param_type = get_fully_bound_dimension(status,
 					builder, scope, dimension, var_name);
 
@@ -439,14 +440,14 @@ function_scope_t::ref make_param_list_scope(
 		for (auto &param : params) {
 			llvm::Value *llvm_param = &(*args++);
 			if (llvm_param->getName().str().size() == 0) {
-				llvm_param->setName(param.first.str());
+				llvm_param->setName(param.first);
 			}
 
 			/* create an alloca in order to be able to reassign the named
 			 * parameter to a new value. this does not mean that the parameter
 			 * is an out param, we are simply enabling reuse of the name */
 			llvm::AllocaInst *llvm_alloca = llvm_create_entry_block_alloca(
-					llvm_function, param.second, param.first.str());
+					llvm_function, param.second, param.first);
 
 			// REVIEW: how to manage memory for named parameters? if we allow
 			// changing their value then we have to enforce addref/release
@@ -1040,6 +1041,7 @@ types::type_struct_t::ref get_struct_type_from_managed_ptr(
 	return nullptr;
 }
 
+#if 0
 bound_var_t::ref extract_member_variable(
 		status_t &status, 
 		llvm::IRBuilder<> &builder,
@@ -1047,7 +1049,7 @@ bound_var_t::ref extract_member_variable(
 		life_t::ref life,
 		ast::item_t::ref node,
 		bound_var_t::ref bound_var,
-		atom member_name)
+		std::string member_name)
 {
 	bound_var = maybe_load_from_pointer(status, builder, scope, bound_var);
 
@@ -1127,7 +1129,7 @@ bound_var_t::ref extract_member_variable(
 					member_name.c_str());
 			user_message(log_info, status, bound_var->type->get_location(), "%s has dimension(s) [%s]",
 					full_type->str().c_str(),
-					join_with(member_index, ", ", [] (std::pair<atom, int> index) -> std::string {
+					join_with(member_index, ", ", [] (std::pair<std::string, int> index) -> std::string {
 						return std::string(C_ID) + index.first.str() + C_RESET;
 						}).c_str());
 		}
@@ -1136,6 +1138,7 @@ bound_var_t::ref extract_member_variable(
 	assert(!status);
 	return nullptr;
 }
+#endif
 
 bound_var_t::ref call_typeid(
 		status_t &status,
@@ -1179,7 +1182,7 @@ bound_var_t::ref call_typeid(
 					{resolved_value});
 		}
 	} else {
-		auto iatom = atom{resolved_value->type->get_type()->get_signature()}.iatom;
+		auto iatom = atomize(resolved_value->type->get_type()->get_signature());
 		return bound_var_t::create(
 				INTERNAL_LOC(),
 				string_format("typeid(%s)", resolved_value->str().c_str()),
@@ -1465,7 +1468,7 @@ void type_check_module_types(
 {
 	if (!!status) {
 		indent_logger indent(2, string_format("type-checking types in module " c_module("%s"),
-					obj.module_key.str().c_str()));
+					obj.module_key.c_str()));
 
 		/* get module level scope types */
 		module_scope_t::ref module_scope = compiler.get_module_scope(obj.module_key);
@@ -2246,7 +2249,7 @@ bound_var_t::ref ast::reference_expr_t::resolve_overrides(
 
 	// scope->dump(std::cerr);
 	auto name = join_with(path, ".", [](identifier::ref x) -> std::string {
-		return x->get_name().str();
+		return x->get_name();
 	});
 
 	/* ok, we know we've got some variable here */

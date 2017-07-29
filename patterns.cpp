@@ -6,6 +6,7 @@
 #include "compiler.h"
 #include "llvm_types.h"
 #include <iostream>
+#include "atom.h"
 
 void ast::match_block_t::resolve_statement(
 		status_t &status,
@@ -73,18 +74,18 @@ bound_var_t::ref gen_type_check(
 	assert(life->life_form == lf_statement);
 
 	auto program_scope = scope->get_program_scope();
-	atom signature = bound_type->get_type()->get_signature();
+	auto signature = bound_type->get_type()->get_signature();
 	auto type_id_wanted = bound_var_t::create(
 			INTERNAL_LOC(),
 			string_format("typeid(%s)", value_name->str().c_str()),
 			program_scope->get_bound_type({TYPEID_TYPE}),
-			llvm_create_int32(builder, (int32_t)signature.iatom),
+			llvm_create_int32(builder, (int32_t)atomize(signature)),
 			value_name,
 			false/*is_lhs*/, false /*is_global*/);
 
 	debug_above(2, log(log_info, "generating a runtime type check "
 				"for type %s with signature value %d (for '%s') (type is %s)",
-				bound_type->str().c_str(), (int)signature.iatom,
+				bound_type->str().c_str(), (int)atomize(signature),
 				signature.c_str(), bound_type->get_type()->str().c_str()));
 	bound_var_t::ref type_id = call_typeid(status, scope, life, node,
 			value_name, builder, value);

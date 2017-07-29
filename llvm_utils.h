@@ -23,7 +23,7 @@ bound_var_t::ref create_callsite(
 		scope_t::ref scope,
 		ptr<life_t> life,
 		ptr<const bound_var_t> callee,
-		atom name,
+		std::string name,
 		const location_t &location,
 		bound_var_t::refs values);
 
@@ -49,12 +49,12 @@ std::string llvm_print(llvm::Value &llvm_value);
 std::string llvm_print(llvm::Value *llvm_value);
 std::string llvm_print(llvm::Type *llvm_type);
 std::string llvm_print_function(llvm::Function *llvm_function);
-llvm::AllocaInst *llvm_create_entry_block_alloca(llvm::Function *llvm_function, bound_type_t::ref type, atom var_name);
+llvm::AllocaInst *llvm_create_entry_block_alloca(llvm::Function *llvm_function, bound_type_t::ref type, std::string var_name);
 llvm::Value *_llvm_resolve_alloca(llvm::IRBuilder<> &builder, llvm::Value *llvm_value);
 llvm::Type *llvm_resolve_type(llvm::Value *llvm_value);
-llvm::Type *llvm_create_sum_type(llvm::IRBuilder<> &builder, program_scope_t::ref program_scope, atom name);
-llvm::StructType *llvm_create_struct_type(llvm::IRBuilder<> &builder, atom name, const bound_type_t::refs &dimensions);
-llvm::StructType *llvm_create_struct_type(llvm::IRBuilder<> &builder, atom name, const std::vector<llvm::Type*> &llvm_types);
+llvm::Type *llvm_create_sum_type(llvm::IRBuilder<> &builder, program_scope_t::ref program_scope, std::string name);
+llvm::StructType *llvm_create_struct_type(llvm::IRBuilder<> &builder, std::string name, const bound_type_t::refs &dimensions);
+llvm::StructType *llvm_create_struct_type(llvm::IRBuilder<> &builder, std::string name, const std::vector<llvm::Type*> &llvm_types);
 llvm::Constant *llvm_sizeof_type(llvm::IRBuilder<> &builder, llvm::Type *llvm_type);
 llvm::Value *llvm_maybe_pointer_cast(llvm::IRBuilder<> &builder, llvm::Value *llvm_value, llvm::Type *llvm_type);
 llvm::Value *llvm_maybe_pointer_cast(llvm::IRBuilder<> &builder, llvm::Value *llvm_value, const bound_type_t::ref &bound_type);
@@ -67,7 +67,7 @@ void llvm_verify_function(status_t &status, llvm::Function *llvm_function);
 void llvm_verify_module(status_t &status, llvm::Module &llvm_module);
 
 /* llvm_wrap_type - wrap a normal data type in a managed var_t from the GC */
-llvm::Type *llvm_wrap_type(llvm::IRBuilder<> &builder, program_scope_t::ref program_scope, atom data_name, llvm::Type *llvm_data_type);
+llvm::Type *llvm_wrap_type(llvm::IRBuilder<> &builder, program_scope_t::ref program_scope, std::string data_name, llvm::Type *llvm_data_type);
 
 /* flags for llvm_create_if_branch that tell it whether to invoke release_vars
  * for either branch */
@@ -96,13 +96,13 @@ bound_var_t::ref llvm_start_function(
 		const ptr<const ast::item_t> &node,
 		bound_type_t::refs args,
 		bound_type_t::ref data_type,
-		atom name);
+		std::string name);
 
 bound_var_t::ref llvm_create_global_tag(
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
 		bound_type_t::ref tag_type,
-		atom tag,
+		std::string tag,
 		identifier::ref id);
 
 // NOTE: the explain function is a tool to learn about LLVM types, it does not

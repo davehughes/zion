@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include "lexer.h"
-#include "atom.h"
 #include "logger_decls.h"
 #include "status.h"
 #include "ptr.h"
@@ -28,7 +27,7 @@ struct parse_state_t {
 
 	token_t token;
 	token_t prior_token;
-	atom filename;
+	std::string filename;
 	identifier::ref module_id;
 	lexer_t &lexer;
 	status_t &status;

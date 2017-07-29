@@ -11,6 +11,7 @@
 #include "compiler.h"
 #include "disk.h"
 #include <sys/wait.h>
+#include "atom.h"
 
 int usage() {
 	log(log_error, "available commands: test, read-ir, compile, bc, run, fmt, bin");

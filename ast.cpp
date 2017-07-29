@@ -16,7 +16,7 @@ namespace ast {
 		}
 	}
 
-	module_t::module_t(const atom filename) : filename(filename) {
+	module_t::module_t(const std::string filename) : filename(filename) {
 	}
 
 	std::string module_t::get_canonical_name() const {
@@ -31,8 +31,7 @@ namespace ast {
 		static std::string ext = ".llz";
 		if (name.text == "_") {
 			/* this name is too generic, let's use the leaf filename */
-			std::string filename = name.location.filename.str();
-			auto leaf = leaf_from_file_path(filename);
+			auto leaf = leaf_from_file_path(name.location.filename);
 			if (ends_with(leaf, ext)) {
 				return leaf.substr(0, leaf.size() - ext.size());
 			} else {
@@ -49,7 +48,7 @@ namespace ast {
 	type_decl_t::type_decl_t() {
 	}
 
-    atom var_decl_t::get_symbol() const {
+	std::string var_decl_t::get_symbol() const {
         return {token.text};
     }
 

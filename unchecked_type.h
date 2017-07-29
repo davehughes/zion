@@ -25,7 +25,7 @@ struct unchecked_type_t {
 
 	typedef ptr<const unchecked_type_t> ref;
 	typedef std::vector<ref> refs;
-	typedef std::map<atom, ref> map;
+	typedef std::map<std::string, ref> map;
 
 	static ref create(
 			std::string name,

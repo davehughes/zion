@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <cstdarg>
+#include "atom.h"
 
 #define SWP(x,y) (x^=y, y^=x, x^=y)
 
@@ -265,10 +266,6 @@ std::string clean_ansi_escapes_if_not_tty(FILE *fp, std::string out) {
 
 bool starts_with(const std::string &str, const std::string &search) {
 	return str.find(search) == 0;
-}
-
-bool starts_with(atom atom_str, const std::string &search) {
-	return atom_str.str().find(search) == 0;
 }
 
 bool starts_with(const char *str, const std::string &search) {

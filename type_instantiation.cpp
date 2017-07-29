@@ -102,8 +102,8 @@ types::type_t::ref instantiate_data_ctor_type(
 		identifier::ref id)
 {
 	/* get the name of the ctor */
-	atom tag_name = id->get_name();
-	atom fqn_tag_name = scope->make_fqn(tag_name.str());
+	std::string tag_name = id->get_name();
+	std::string fqn_tag_name = scope->make_fqn(tag_name);
 	auto qualified_id = make_iid_impl(fqn_tag_name, id->get_location());
 
 	/* create the tag type */
@@ -181,11 +181,11 @@ void ast::struct_t::register_type(
 			 * unchecked data ctor for the type */
 			auto data_ctor_type = instantiate_data_ctor_type(status, builder,
 					get_type(), scope, shared_from_this(),
-					type_name);
+					make_code_id(token_t{token.location, tk_identifier, type_name}));
 
 			if (!!status) {
 				/* register the typename in the current environment */
-				auto qualified_type_name = scope->make_fqn(type_name->get_name().str());
+				auto qualified_type_name = scope->make_fqn(type_name);
 				debug_above(7, log(log_info, "registering type " c_type("%s") " in scope %s",
 							qualified_type_name.c_str(), scope->get_name().c_str()));
 				scope->put_typename(status, qualified_type_name, data_ctor_type);
@@ -195,9 +195,9 @@ void ast::struct_t::register_type(
 			}
 		} else {
 			/* simple check for an already bound typename env variable */
-			user_error(status, type_name->get_location(),
+			user_error(status, token.location,
 					"symbol " c_id("%s") " is already taken in typename env by %s",
-					type_name->get_name().c_str(),
+					type_name.c_str(),
 					env_iter->second->str().c_str());
 		}
 	}
@@ -213,6 +213,6 @@ void ast::polymorph_t::register_type(
 	debug_above(3, log(log_info, "creating subtypes to %s", token.text.c_str()));
 
 	scope->put_typename(status,
-		   	scope->make_fqn(get_type_name()->get_name().str()),
+		   	scope->make_fqn(get_type_name()),
 		   	get_type());
 }

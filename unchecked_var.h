@@ -18,7 +18,7 @@ struct unchecked_var_t : public var_t {
 			ptr<module_scope_t> module_scope)
 		: id(id), node(node), module_scope(module_scope)
 	{
-		assert(id && !!id->get_name());
+		assert(id && id->get_name().size() != 0);
 		assert(node != nullptr);
 	}
 	virtual ~unchecked_var_t() throw() {}
@@ -32,7 +32,7 @@ struct unchecked_var_t : public var_t {
 	typedef ptr<const unchecked_var_t> ref;
 	typedef std::vector<ref> refs;
 	typedef refs overload_vector;
-	typedef std::map<atom, overload_vector> map;
+	typedef std::map<std::string, overload_vector> map;
 
 	static ref create(
 			identifier::ref id,

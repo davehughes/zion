@@ -565,7 +565,7 @@ identifier::ref make_code_id(const token_t &token) {
 	return make_ptr<code_id>(token);
 }
 
-identifier::ref make_type_id_code_id(const location_t location, atom var_name) {
+identifier::ref make_type_id_code_id(const location_t location, std::string var_name) {
 	return make_ptr<type_id_code_id>(location, var_name);
 }
 
@@ -746,7 +746,7 @@ dimension_t::ref dimension_t::parse(parse_state_t &ps) {
 }
 
 ptr<const module_t> module_t::parse(parse_state_t &ps) {
-	debug_above(6, log("about to parse %s", ps.filename.str().c_str()));
+	debug_above(6, log("about to parse %s", ps.filename.c_str()));
 
 	auto module_decl = module_decl_t::parse(ps);
 

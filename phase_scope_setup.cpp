@@ -27,7 +27,7 @@ unchecked_var_t::ref scope_setup_function_defn(
 		identifier::ref id,
 		module_scope_t::ref module_scope)
 {
-	if (id && !!id->get_name()) {
+	if (id && id->get_name().size() != 0) {
 		return module_scope->get_program_scope()->put_unchecked_variable(
 				id->get_name(), unchecked_var_t::create(id, obj, module_scope));
 	} else {

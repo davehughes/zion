@@ -19,7 +19,7 @@ unification_t::unification_t(
 				::str(bindings).c_str()));
 }
 
-bool get_type_variable_name(types::type_t::ref type, atom &name) {
+bool get_type_variable_name(types::type_t::ref type, std::string &name) {
 	if (auto ptv = dyncast<const types::type_variable_t>(type)) {
 		name = ptv->id->get_name();
 		return true;
@@ -30,7 +30,7 @@ bool get_type_variable_name(types::type_t::ref type, atom &name) {
 
 types::type_t::ref prune(types::type_t::ref t, types::type_t::map bindings) {
 	/* Follow the links across the bindings to reach the final binding. */
-	atom type_variable_name;
+	std::string type_variable_name;
 	if (get_type_variable_name(t, type_variable_name)) {
         if (bindings.find(type_variable_name) != bindings.end()) {
             return prune(bindings[type_variable_name], bindings);

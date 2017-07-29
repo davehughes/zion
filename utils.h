@@ -27,6 +27,11 @@ std::string string_format(const std::string fmt_str, ...);
 std::string base26(unsigned int i);
 void strrev(char *p);
 
+template <typename U, typename COLL>
+bool in(U item, const COLL &set) {
+	return set.find(item) != set.end();
+}
+
 template <typename T>
 T merge(const T &a, const T &b) {
 	T new_t;

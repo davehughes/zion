@@ -7,6 +7,7 @@
 #include "llvm_types.h"
 #include "code_id.h"
 #include "life.h"
+#include "atom.h"
 
 llvm::Value *llvm_create_global_string(llvm::IRBuilder<> &builder, std::string value) {
 	return builder.CreateGlobalStringPtr(value);
@@ -150,7 +151,7 @@ bound_var_t::ref create_callsite(
         scope_t::ref scope,
 		life_t::ref life,
 		const bound_var_t::ref function,
-		atom name,
+		std::string name,
 		const location_t &location,
 		bound_var_t::refs arguments)
 {
@@ -345,7 +346,7 @@ std::string llvm_print(llvm::Type *llvm_type) {
 llvm::AllocaInst *llvm_create_entry_block_alloca(
 		llvm::Function *llvm_function,
 	   	bound_type_t::ref type,
-	   	atom var_name)
+	   	std::string var_name)
 {
 	/* we'll need to place the alloca instance in the entry block, so let's
 	 * make a builder that points there */
@@ -420,7 +421,7 @@ void llvm_create_if_branch(
 
 llvm::StructType *llvm_create_struct_type(
 		llvm::IRBuilder<> &builder,
-		atom name,
+		std::string name,
 		const std::vector<llvm::Type*> &llvm_types)
 {
 	llvm::ArrayRef<llvm::Type*> llvm_dims{llvm_types};
@@ -428,7 +429,7 @@ llvm::StructType *llvm_create_struct_type(
 	auto llvm_struct_type = llvm::StructType::create(builder.getContext(), llvm_dims);
 
 	/* give the struct a helpful name internally */
-	llvm_struct_type->setName(name.str());
+	llvm_struct_type->setName(name);
 
 	debug_above(3, log(log_info, "created struct type " c_id("%s") " %s",
 				name.c_str(),
@@ -439,7 +440,7 @@ llvm::StructType *llvm_create_struct_type(
 
 llvm::StructType *llvm_create_struct_type(
 		llvm::IRBuilder<> &builder,
-		atom name,
+		std::string name,
 		const bound_type_t::refs &dimensions) 
 {
 	std::vector<llvm::Type*> llvm_types;
@@ -458,7 +459,7 @@ llvm::StructType *llvm_create_struct_type(
 llvm::Type *llvm_create_sum_type(
 		llvm::IRBuilder<> &builder,
 		program_scope_t::ref program_scope,
-		atom name)
+		std::string name)
 {
 	llvm::StructType *llvm_sum_type = llvm_create_struct_type(builder, name,
 			std::vector<llvm::Type*>{});
@@ -470,7 +471,7 @@ llvm::Type *llvm_create_sum_type(
 llvm::Type *llvm_wrap_type(
 		llvm::IRBuilder<> &builder,
 		program_scope_t::ref program_scope,
-		atom data_name,
+		std::string data_name,
 		llvm::Type *llvm_data_type)
 {
 	/* take something like this:
@@ -493,7 +494,7 @@ llvm::Type *llvm_wrap_type(
 	auto llvm_struct_type = llvm::StructType::create(builder.getContext(), llvm_dims);
 
 	/* give the struct a helpful name internally */
-	llvm_struct_type->setName(data_name.str());
+	llvm_struct_type->setName(data_name);
 
 	/* we'll be referring to pointers to these variable structures */
 	return llvm_struct_type;
@@ -555,7 +556,7 @@ bound_var_t::ref llvm_start_function(status_t &status,
 		const ast::item_t::ref &node,
 		bound_type_t::refs args,
 		bound_type_t::ref data_type,
-		atom name)
+		std::string name)
 {
 	if (!!status) {
 		/* get the llvm function type for the data ctor */
@@ -572,7 +573,8 @@ bound_var_t::ref llvm_start_function(status_t &status,
 			/* now let's generate our actual data ctor fn */
 			auto llvm_function = llvm::Function::Create(
 					(llvm::FunctionType *)llvm_fn_type,
-					llvm::Function::ExternalLinkage, name.str(),
+					llvm::Function::ExternalLinkage,
+				   	name,
 					scope->get_llvm_module());
 
 			/* create the actual bound variable for the fn */
@@ -639,7 +641,7 @@ bound_var_t::ref llvm_create_global_tag(
 		llvm::IRBuilder<> &builder,
 		scope_t::ref scope,
 		bound_type_t::ref tag_type,
-		atom tag,
+		std::string tag,
 		identifier::ref id)
 {
 	auto program_scope = scope->get_program_scope();
@@ -663,7 +665,7 @@ bound_var_t::ref llvm_create_global_tag(
 	llvm::Module *llvm_module = scope->get_llvm_module();
 	assert(llvm_module != nullptr);
 
-	llvm::Constant *llvm_name = llvm_create_global_string_constant(builder, *llvm_module, tag.str());
+	llvm::Constant *llvm_name = llvm_create_global_string_constant(builder, *llvm_module, tag);
 	debug_above(10, log(log_info, "llvm_name is %s", llvm_print(*llvm_name).c_str()));
 
 	llvm::StructType *llvm_type_info_type = llvm::cast<llvm::StructType>(
@@ -673,7 +675,7 @@ bound_var_t::ref llvm_create_global_tag(
 
 	std::vector<llvm::Constant *> llvm_tag_data({
 			/* type_id - the actual type "tag" */
-			(llvm::Constant *)llvm_create_int32(builder, tag.iatom),
+			(llvm::Constant *)llvm_create_int32(builder, atomize(tag)),
 
 			/* the number of contained references */
 			builder.getInt16(-1),
@@ -697,12 +699,12 @@ bound_var_t::ref llvm_create_global_tag(
 	check_struct_initialization(llvm_tag_initializer, llvm_type_info_type);
 
 	llvm::GlobalVariable *llvm_type_info = llvm_get_global(
-			llvm_module, std::string("__tag_type_info_") + tag.str(),
+			llvm_module, std::string("__tag_type_info_") + tag,
 			llvm::ConstantStruct::get(llvm_type_info_type,
 				llvm_tag_initializer), true /*is_constant*/);
 
 	llvm::GlobalVariable *llvm_tag_constant = llvm_get_global(llvm_module,
-			std::string("__tag_") + tag.str(),
+			std::string("__tag_") + tag,
 			llvm::ConstantStruct::get(llvm_tag_type,
 				llvm_type_info, nullptr), true /*is_constant*/);
 

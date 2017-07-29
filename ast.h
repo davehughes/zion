@@ -273,7 +273,7 @@ namespace ast {
 				local_scope_t::ref *new_scope,
 				bool *returns) const;
 
-		virtual atom get_symbol() const;
+		virtual std::string get_symbol() const;
 		location_t get_location() const;
 		virtual bound_var_t::ref resolve_initializer(
 				status_t &status,
@@ -456,12 +456,12 @@ namespace ast {
 	struct module_t : public std::enable_shared_from_this<module_t>, public item_impl_t<item_t> {
 		typedef ptr<const module_t> ref;
 
-		module_t(const atom filename);
+		module_t(const std::string filename);
 		static ptr<const module_t> parse(parse_state_t &ps);
 		std::string get_canonical_name() const;
 
-		atom filename;
-		mutable atom module_key;
+		std::string filename;
+		mutable std::string module_key;
 
 		ptr<const module_decl_t> decl;
 		std::vector<ptr<const user_defined_type_t>> user_defined_types;
