@@ -5,7 +5,12 @@ import subprocess
 
 def _get_argparser():
     """Pull the arguments from the CLI."""
-    parser = argparse.ArgumentParser(description='Test a Zion program.')
+    parser = argparse.ArgumentParser(description='Test a compiled program.')
+
+    parser.add_argument(
+        '-c', '--compiler',
+        required=True,
+        type=str, help='the compiler you would like to use')
 
     parser.add_argument(
         '-p', '--program',
@@ -25,10 +30,10 @@ def main():
 
     try:
         program_filename = subprocess.check_output(
-            "./zionc find %s" % args.program, shell=True).strip()
+            "%s find %s" % (args.compiler, args.program), shell=True).strip()
 
         if not program_filename:
-            print("Zion could not find %s" % args.program)
+            print("%s could not find %s" % (args.compiler, args.program))
             sys.exit(0)
 
         expect = (subprocess.check_output(
@@ -45,7 +50,8 @@ def main():
 
     print("Searching for %s in output from %s..." % (expect, program_filename))
     try:
-        actual = subprocess.check_output("./zionc run %s" % args.program, shell=True)
+        actual = subprocess.check_output("%s run %s" % (args.compiler,
+                                                          args.program), shell=True)
     except subprocess.CalledProcessError as e:
         print(e)
         sys.exit(-1)

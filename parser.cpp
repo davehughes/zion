@@ -83,7 +83,7 @@ ptr<const return_statement_t> return_statement_t::parse(parse_state_t &ps) {
 	auto return_statement = create<ast::return_statement_t>(ps.token);
 	chomp_ident("return");
 	if (ps.token.tk != tk_rcurly) {
-		return_statement->expr = reference_expr_t::parse(ps);
+		return_statement->expr = expression_t::parse(ps);
 		if (!ps.status) {
 			assert(!ps.status);
 			return nullptr;

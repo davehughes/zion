@@ -177,7 +177,7 @@ namespace ast {
 		typedef ptr<const return_statement_t> ref;
 
 		static ptr<const return_statement_t> parse(parse_state_t &ps);
-		ptr<const reference_expr_t> expr;
+		ptr<const expression_t> expr;
 
 		virtual void resolve_statement(
 				status_t &status,

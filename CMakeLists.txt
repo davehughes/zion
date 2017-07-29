@@ -102,6 +102,8 @@ add_test(
 	NAME unit_tests
 	COMMAND ./llz test)
 
-foreach(_test_name)
-	add_test(NAME ${_test_name} COMMAND python expect.py -p ${_test_name})
+foreach(_test_name
+		test_hello_world
+		)
+	add_test(NAME ${_test_name} COMMAND python expect.py -c ./llz -p ${_test_name})
 endforeach(_test_name)
