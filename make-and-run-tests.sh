@@ -13,4 +13,5 @@ ls -tr -la | grep -i cmake
 make -j4
 ls -tr -la | grep -i cmake
 
-ctest
+ctest || (cat Testing/Temporary/LastTest.log ; exit 1)
+cat Testing/Temporary/LastTest.log
