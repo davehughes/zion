@@ -1274,18 +1274,6 @@ void ast::function_defn_t::resolve_function_defn(
 	return;
 }
 
-#define USER_MAIN_FN "user/main"
-
-std::string switch_std_main(std::string name) {
-	if (name == "main") {
-		return USER_MAIN_FN;
-	} else if (name == "__main__") {
-		return "main";
-	} else {
-		return name;
-	}
-}
-
 bound_var_t::ref ast::function_defn_t::instantiate_with_args_and_return_type(
         status_t &status,
         llvm::IRBuilder<> &builder,
@@ -1300,7 +1288,7 @@ bound_var_t::ref ast::function_defn_t::instantiate_with_args_and_return_type(
 	assert(life->life_form == lf_function);
 	assert(life->values.size() == 0);
 
-	std::string function_name = switch_std_main(token.text);
+	std::string function_name = token.text;
 
 	assert(scope->get_llvm_module() != nullptr);
 
@@ -2197,8 +2185,14 @@ bound_var_t::ref ast::literal_expr_t::resolve_expression(
     switch (token.tk) {
 	case tk_integer:
         {
-			/* create a native integer */
 			int64_t value = atoll(token.text.c_str());
+
+			/* create a native integer */
+			if (starts_with(token.text, "0x")) {
+				value = strtoll(token.text.c_str() + 2, nullptr, 16);
+			} else {
+				value = atoll(token.text.c_str());
+			}
 			bound_type_t::ref native_type = program_scope->get_bound_type({INT_TYPE});
 			return bound_var_t::create(
 					INTERNAL_LOC(), "raw_int_literal", native_type,

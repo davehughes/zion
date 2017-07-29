@@ -78,6 +78,7 @@ void lexer_t::get_token(
 		gts_integer,
 		gts_float,
 		gts_float_symbol,
+		gts_hex_start,
 		gts_expon,
 		gts_expon_symbol,
 		gts_comment,
@@ -232,6 +233,13 @@ l_begin:
 				gts = gts_float;
 			}
 			break;
+		case gts_hex_start:
+			if (!isdigit(ch)) {
+				gts = gts_error;
+			} else {
+				gts = gts_integer;
+			}
+			break;
 		case gts_float:
 			if (ch == 'e' || ch == 'E') {
 				gts = gts_expon_symbol;
@@ -261,8 +269,12 @@ l_begin:
 			} else if (ch == '.') {
 				gts = gts_float_symbol;
 			} else if (!isdigit(ch)) {
-				gts = gts_end;
-				scan_ahead = false;
+				if (ch == 'x' && token_text == "0") {
+					gts = gts_hex_start;
+				} else {
+					gts = gts_end;
+					scan_ahead = false;
+				}
 			}
 			break;
 		case gts_token:
