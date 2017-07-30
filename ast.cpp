@@ -71,7 +71,14 @@ namespace ast {
 	}
 
 	types::type_t::ref struct_t::get_type() const {
-		return null_impl();
+	   	types::type_t::refs member_types;
+	   	types::name_index_t name_index;
+		int i = 0;
+		for (auto dimension : dimensions) {
+			member_types.push_back(dimension->type);
+			name_index[dimension->token.text] = i++;
+		}
+		return type_struct(member_types, name_index);
 	}
 
 	std::string polymorph_t::get_type_name() const {
@@ -79,6 +86,6 @@ namespace ast {
 	}
 
 	types::type_t::ref polymorph_t::get_type() const {
-		return null_impl();
+		return type_sum(subtypes);
 	}
 }

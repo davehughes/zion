@@ -243,7 +243,7 @@ namespace ast {
 		virtual std::string get_type_name() const;
 		virtual types::type_t::ref get_type() const;
 
-		identifier::set subtypes;
+		types::type_t::refs subtypes;
 	};
 
 	struct struct_t : public std::enable_shared_from_this<struct_t>, public item_impl_t<user_defined_type_t> {

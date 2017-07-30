@@ -10,7 +10,7 @@
 
 const char *GLOBAL_ID = "_";
 const token_kind_t SCOPE_TK = tk_dot;
-const char *SCOPE_SEP = ".";
+const char *SCOPE_SEP = "/";
 const char SCOPE_SEP_CHAR = '/';
 
 bound_var_t::ref get_bound_variable_from_scope(
@@ -412,7 +412,7 @@ module_scope_impl_t::module_scope_impl_t(
 	   	program_scope_t::ref parent_scope,
 		llvm::Module *llvm_module) :
 	scope_impl_t<module_scope_t>(name, parent_scope),
-   	llvm_module(llvm_module)
+	llvm_module(llvm_module)
 {
 }
 

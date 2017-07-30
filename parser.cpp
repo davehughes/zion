@@ -664,14 +664,13 @@ polymorph_t::ref polymorph_t::parse(parse_state_t &ps, token_t type_name) {
 	chomp_token(tk_lcurly);
 
 	auto polymorph = ast::create<polymorph_t>(type_name);
-	while (ps.token.tk == tk_identifier) {
-		auto subtype = make_code_id(ps.token);
-		if (polymorph->subtypes.find(subtype) != polymorph->subtypes.end()) {
-			ps.error("subtype " c_id("%s") " already exists", ps.token.text.c_str()); 
+	while (ps.token.tk != tk_rcurly) {
+		auto subtype = parse_type_ref(ps);
+		if (!!ps.status) {
+			polymorph->subtypes.push_back(subtype);
 			ps.advance();
 		} else {
-			polymorph->subtypes.insert(subtype);
-			ps.advance();
+			break;
 		}
 	}
 
