@@ -10,8 +10,8 @@
 
 const char *GLOBAL_ID = "_";
 const token_kind_t SCOPE_TK = tk_dot;
-const char *SCOPE_SEP = "/";
-const char SCOPE_SEP_CHAR = '/';
+const char *SCOPE_NAME_SEP = "/";
+const char SCOPE_NAME_SEP_CHAR = '/';
 
 bound_var_t::ref get_bound_variable_from_scope(
 		status_t &status,
@@ -67,12 +67,15 @@ bound_type_t::ref get_bound_type_from_scope(
 }
 
 std::string scope_t::get_name() const {
+	return get_leaf_name();
+#if 0
 	auto parent_scope = this->get_parent_scope();
 	if (parent_scope) {
 		return parent_scope->get_name() + SCOPE_SEP + get_leaf_name();
 	} else {
 		return get_leaf_name();
 	}
+#endif
 }
 
 ptr<program_scope_t> program_scope_t::get_program_scope() {
@@ -433,7 +436,9 @@ void module_scope_impl_t::put_unchecked_type(
 {
 	debug_above(6, log(log_info, "registering an unchecked type %s",
 				unchecked_type->str().c_str()));
-	assert(unchecked_type->name.find(SCOPE_SEP) != std::string::npos);
+
+	/* avoid qualified names */
+	assert(unchecked_type->name.find(SCOPE_NAME_SEP) == std::string::npos);
 
 	auto unchecked_type_iter = unchecked_types.find(unchecked_type->name);
 
@@ -501,18 +506,6 @@ unchecked_var_t::ref put_unchecked_variable_impl(
 
 	/* also keep a list of the order in which we encountered these */
 	unchecked_vars_ordered.push_back(unchecked_variable);
-
-	if (program_scope != nullptr) {
-		/* register this variable so that it can be found by other modules */
-
-		// TODO: if variable was created with the injection property (whether
-		// "global" or otherwise) then don't prefix the current_scope_name, but
-		// try to just inject it into the associated namespace
-
-		program_scope->put_unchecked_variable(
-				current_scope_name + SCOPE_SEP + symbol,
-				unchecked_variable);	
-	}
 
 	return unchecked_variable;
 }

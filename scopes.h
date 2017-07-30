@@ -9,8 +9,8 @@
 #include "unchecked_var.h"
 
 extern const token_kind_t SCOPE_TK;
-extern const char *SCOPE_SEP;
-extern const char SCOPE_SEP_CHAR;
+extern const char *SCOPE_NAME_SEP;
+extern const char SCOPE_NAME_SEP_CHAR;
 extern const char *GLOBAL_ID;
 
 struct scope_t;
@@ -303,14 +303,13 @@ void scope_impl_t<T>::put_typename(
 		types::type_t::ref expansion)
 {
 #ifdef DEBUG
-	/* make sure that all type_names come in fully qualified */
-	int slash_count = 0;
+	/* make sure that all type_names come in without qualified names. llz does
+	 * not have namespaces. */
 	for (auto ch : type_name) {
-		if (ch == SCOPE_SEP_CHAR) {
-			++slash_count;
+		if (ch == SCOPE_NAME_SEP_CHAR) {
+			assert(false);
 		}
 	}
-	assert(slash_count == 1);
 #endif
 
 	if (typename_env.find(type_name) == typename_env.end()) {
@@ -373,6 +372,8 @@ std::string scope_impl_t<T>::str() {
 
 template <typename T>
 std::string scope_impl_t<T>::make_fqn(std::string leaf_name) const {
+	return leaf_name;
+#if 0
 	assert(leaf_name.find(SCOPE_SEP) == std::string::npos);
 	if (auto module_scope = this->get_module_scope()) {
 		return module_scope->get_leaf_name() + SCOPE_SEP + leaf_name;
@@ -380,6 +381,7 @@ std::string scope_impl_t<T>::make_fqn(std::string leaf_name) const {
 		assert(false);
 		return leaf_name;
 	}
+#endif
 }
 
 template <typename T>

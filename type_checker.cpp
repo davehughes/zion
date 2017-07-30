@@ -355,7 +355,7 @@ bound_var_t::ref type_check_bound_var_decl(
 }
 
 bound_type_t::named_pairs zip_named_pairs(
-		std::vector<std::string> names,
+		const std::vector<std::string> &names,
 		bound_type_t::refs args)
 {
 	bound_type_t::named_pairs named_args;

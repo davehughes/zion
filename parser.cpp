@@ -369,10 +369,6 @@ ptr<const block_t> block_t::parse(parse_state_t &ps) {
 	auto block = create<ast::block_t>(ps.token);
 	auto block_start_token = ps.token;
 	chomp_token(tk_lcurly);
-	if (ps.token.tk == tk_rcurly) {
-		ps.error("empty blocks are not allowed, sorry. use pass.");
-		return nullptr;
-	}
 
 	while (!!ps.status && ps.token.tk != tk_rcurly) {
 		auto statement = statement_t::parse(ps);
@@ -513,8 +509,11 @@ ptr<const function_decl_t> function_decl_t::parse(parse_state_t &ps) {
 
 	if (!!ps.status) {
 		chomp_token(tk_rparen);
-		expect_token(tk_identifier);
-		function_decl->return_type = parse_type_ref(ps);
+		if (ps.token.tk == tk_lcurly) {
+			function_decl->return_type = type_id(make_iid("void"));
+		} else {
+			function_decl->return_type = parse_type_ref(ps);
+		}
 
 		return function_decl;
 	}
@@ -617,18 +616,6 @@ token_t _parse_function_type(parse_state_t &ps) {
 	return {};
 }
 #endif
-
-identifier::ref reduce_ids(std::list<identifier::ref> ids, location_t location) {
-	assert(ids.size() != 0);
-	std::stringstream ss;
-	const char *inner_sep = SCOPE_SEP;
-	const char *sep = "";
-	for (auto id : ids) {
-		ss << sep << id->get_name();
-		sep = inner_sep;
-	}
-	return make_iid_impl(ss.str(), location);
-}
 
 type_decl_t::ref type_decl_t::parse(parse_state_t &ps, token_t name_token) {
 	assert(false);

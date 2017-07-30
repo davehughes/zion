@@ -56,4 +56,3 @@ namespace std {
 }
 
 identifier::set to_identifier_set(const identifier::refs &refs);
-identifier::ref reduce_ids(std::list<identifier::ref> ids, location_t location);

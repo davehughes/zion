@@ -21,6 +21,105 @@ bound_var_t::ref make_call_value(
 			"temp_call_value", INTERNAL_LOC(), arguments);
 }
 
+std::vector<std::string> get_param_list_decl_variable_names(
+		std::vector<ast::dimension_t::ref> params)
+{
+	std::vector<std::string> names;
+	for (auto param : params) {
+		names.push_back(param->token.text);
+	}
+	return names;
+}
+
+
+bound_var_t::ref instantiate_unchecked_fn(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		scope_t::ref scope,
+		unchecked_var_t::ref unchecked_fn,
+		types::type_t::ref fn_type,
+		unification_t unification)
+{
+	assert(fn_type->ftv_count() == 0 && "we cannot instantiate an abstract function");
+	debug_above(4, log(log_info, "we are in scope " c_id("%s"), scope->get_name().c_str()));
+	debug_above(4, log(log_info, "it's time to instantiate %s with unified signature %s from %s",
+				unchecked_fn->str().c_str(),
+				fn_type->str().c_str(),
+				unification.str().c_str()));
+
+	/* save and later restore the current branch insertion point */
+	llvm::IRBuilderBase::InsertPointGuard ipg(builder);
+
+	/* lifetimes have extents at function boundaries */
+	auto life = make_ptr<life_t>(status, lf_function);
+
+	if (auto function_defn = dyncast<const ast::function_defn_t>(unchecked_fn->node)) {
+		/* we shouldn't be here unless we found something to substitute */
+
+		debug_above(4, log(log_info, "building substitution for %s with unification %s",
+					function_defn->token.str().c_str(),
+					unification.str().c_str()));
+
+		if (auto function = dyncast<const types::type_function_t>(fn_type)) {
+			bound_type_t::refs args = upsert_bound_types(status,
+					builder, unchecked_fn->module_scope, function->args->args);
+
+			if (!!status) {
+				bound_type_t::named_pairs named_args = zip_named_pairs(
+						get_param_list_decl_variable_names(
+							function_defn->decl->params),
+						args);
+
+				bound_type_t::ref return_type = upsert_bound_type(status,
+						builder, unchecked_fn->module_scope, function->return_type);
+
+				if (!!status) {
+					/* instantiate the function we want */
+					return function_defn->instantiate_with_args_and_return_type(status,
+							builder, unchecked_fn->module_scope, life, nullptr /*new_scope*/,
+							named_args, return_type);
+				} else {
+					user_message(log_info, status, unchecked_fn->get_location(),
+							"while instantiating function %s",
+							unchecked_fn->str().c_str());
+				}
+			}
+		} else {
+			panic("we should have a product type for our fn_type");
+		}
+	} else if (ast::struct_t::ref struct_def = dyncast<const ast::struct_t>(unchecked_fn->node)) {
+		ast::item_t::ref node = struct_def;
+
+		/* we shouldn't be here unless we found something to substitute */
+		debug_above(4, log(log_info, "building substitution for %s",
+					node->get_token().str().c_str()));
+		auto unchecked_data_ctor = dyncast<const unchecked_data_ctor_t>(unchecked_fn);
+		assert(unchecked_data_ctor != nullptr);
+
+		types::type_function_t::ref data_ctor_type = dyncast<const types::type_function_t>(
+				unchecked_data_ctor->sig->rebind(unification.bindings));
+		assert(data_ctor_type != nullptr);
+		debug_above(4, log(log_info, "going to bind ctor for %s",
+					data_ctor_type->str().c_str()));
+
+		/* instantiate the data ctor we want */
+		bound_var_t::ref ctor_fn = bind_ctor_to_scope(
+				status, builder, unchecked_fn->module_scope,
+				unchecked_fn->id, node,
+				data_ctor_type);
+
+		if (!!status) {
+			/* the ctor should now exist */
+			assert(ctor_fn != nullptr);
+			return ctor_fn;
+		}
+	}
+
+	assert(!status);
+	return nullptr;
+}
+
+
 bound_var_t::ref check_func_vs_callsite(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
@@ -38,7 +137,21 @@ bound_var_t::ref check_func_vs_callsite(
 			debug_above(3, log(log_info, "override resolution has chosen %s",
 						bound_fn->str().c_str()));
 			return bound_fn;
+		} else if (auto unchecked_fn = dyncast<const unchecked_var_t>(fn)) {
+			/* we're instantiating a template or a forward decl */
+			/* we know that fn and args are compatible */
+			/* create the new callee signature type for building the generic
+			 * substitution scope */
+			debug_above(5, log(log_info, "rebinding %s with %s",
+						fn->str().c_str(),
+						::str(unification.bindings).c_str()));
+
+			types::type_t::ref fn_type = fn->get_type(scope)->rebind(unification.bindings);
+
+			return instantiate_unchecked_fn(status, builder, scope,
+					unchecked_fn, fn_type, unification);
 		} else {
+			dbg();
 			panic("unhandled var type");
 		}
 
