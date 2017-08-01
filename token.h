@@ -57,8 +57,8 @@ const char * const K_then = "then";
 const char * const K_typeid = "typeid";
 const char * const K_sizeof = "sizeof";
 const char * const K_type = "type";
-const char * const K_struct = "struct";
-const char * const K_polymorph = "polymorph";
+const char * const K_has = "has";
+const char * const K_is = "is";
 #define K(x) K_##x
 
 struct token_t {

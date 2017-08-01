@@ -188,11 +188,13 @@ bool bound_type_t::is_module() const {
 }
 
 bool bound_type_t::is_managed() const {
-	if (dyncast<const types::type_raw_pointer_t>(type) != nullptr) {
-		return false;
-	} else {
-		return is_managed_type_name(type->repr());
-	}
+	assert(false);
+#if 0
+	if (auto ptr = dyncast<const types::type_ptr_t>(type)) {
+		return ptr->is_managed();
+	} else 
+#endif
+	return false;
 }
 
 std::string bound_type_t::get_signature() const {

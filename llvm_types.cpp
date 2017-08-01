@@ -29,58 +29,40 @@ bound_type_t::refs upsert_bound_types(
 	return bound_args;
 }
 
-bound_type_t::ref create_managed_ptr_type(
+bound_type_t::ref create_ptr_type(
 		llvm::IRBuilder<> &builder,
-		types::type_managed_ptr_t::ref managed_ptr)
+		types::type_ptr_t::ref ptr_type)
 {
-	debug_above(4, log(log_info, "creating managed ptr type for %s",
-				managed_ptr->element_type->str().c_str()));
+	debug_above(4, log(log_info, "creating ptr type for %s",
+				ptr_type->element_type->str().c_str()));
 	llvm::StructType *llvm_type = llvm::StructType::create(
 			builder.getContext(),
-			managed_ptr->element_type->get_signature());
+			ptr_type->element_type->get_signature());
 	assert(!llvm_type->isSized());
 	assert(llvm_type->isOpaque());
 
 	return bound_type_t::create(
-			managed_ptr,
-			managed_ptr->get_location(),
+			ptr_type,
+			ptr_type->get_location(),
 			llvm_type->getPointerTo());
 }
 
-bound_type_t::ref create_native_ptr_type(
-		llvm::IRBuilder<> &builder,
-		types::type_native_ptr_t::ref native_ptr)
-{
-	debug_above(4, log(log_info, "creating native ptr type for %s",
-				native_ptr->element_type->str().c_str()));
-	llvm::StructType *llvm_type = llvm::StructType::create(
-			builder.getContext(),
-			native_ptr->element_type->get_signature());
-	assert(!llvm_type->isSized());
-	assert(llvm_type->isOpaque());
-
-	return bound_type_t::create(
-			native_ptr,
-			native_ptr->get_location(),
-			llvm_type->getPointerTo());
-}
-
-bound_type_t::ref create_bound_managed_ptr_type(
+bound_type_t::ref create_bound_ptr_type(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		ptr<scope_t> scope,
-		const ptr<const types::type_managed_ptr_t> &type_managed_ptr)
+		const ptr<const types::type_ptr_t> &type_ptr)
 {
 	/* create a bound_type for a pointer/ref type */
 	ptr<program_scope_t> program_scope = scope->get_program_scope();
 
-	assert(!scope->get_bound_type(type_managed_ptr->get_signature()));
+	assert(!scope->get_bound_type(type_ptr->get_signature()));
 
-	std::set<std::string> ftvs = type_managed_ptr->get_ftvs();
+	std::set<std::string> ftvs = type_ptr->get_ftvs();
 	if (ftvs.size() != 0) {
-		user_error(status, type_managed_ptr->get_location(),
+		user_error(status, type_ptr->get_location(),
 				"unable to instantiate type %s because free variables [%s] still exist",
-				type_managed_ptr->str().c_str(),
+				type_ptr->str().c_str(),
 				join_with(ftvs, ", ", [] (std::string a) -> std::string {
 					return string_format(c_id("%s"), a.c_str());
 					}).c_str());
@@ -88,24 +70,14 @@ bound_type_t::ref create_bound_managed_ptr_type(
 	}
 
 	/* get the element type's bound type, if it exists */
-	bound_type_t::ref bound_type = scope->get_bound_type(type_managed_ptr->element_type->get_signature());
+	bound_type_t::ref bound_type = scope->get_bound_type(type_ptr->element_type->get_signature());
 
 	if (bound_type != nullptr) {
-		bool managed = false;
-
-		dbg();
 		llvm::StructType *llvm_struct_type = llvm::dyn_cast<llvm::StructType>(
 				bound_type->get_llvm_specific_type());
 
-		if (llvm_struct_type != nullptr) {
-			auto type_name = llvm_struct_type->getStructName();
-
-			// HACKHACK: I don't love this coupling
-			managed = type_name.find("managed.struct") == 0;
-		}
-
-		return bound_type_t::create(type_managed_ptr,
-				type_managed_ptr->get_location(),
+		return bound_type_t::create(type_ptr,
+				type_ptr->get_location(),
 				bound_type->get_llvm_specific_type()->getPointerTo());
 	}
 				
@@ -113,15 +85,15 @@ bound_type_t::ref create_bound_managed_ptr_type(
 	 * opaque placeholder for the struct's concrete type */
 	
 	/* first create the opaque pointer type */
-	auto bound_pointer_type = create_managed_ptr_type(builder, type_managed_ptr);
+	auto bound_pointer_type = create_ptr_type(builder, type_ptr);
 	program_scope->put_bound_type(status, bound_pointer_type);
 
 	debug_above(6, log("create_bound_ref_type(..., %s)",
-				type_managed_ptr->str().c_str()));
+				type_ptr->str().c_str()));
 	
 	/* before we return the pointer type, let's go ahead and instantiate
 	 * the actual structural type */
-	auto element = upsert_bound_type(status, builder, scope, type_managed_ptr->element_type);
+	auto element = upsert_bound_type(status, builder, scope, type_ptr->element_type);
 
 	if (!!status) {
 		return bound_pointer_type;
@@ -129,15 +101,6 @@ bound_type_t::ref create_bound_managed_ptr_type(
 
 	assert(!status);
 	return nullptr;
-}
-
-bound_type_t::ref create_bound_native_ptr_type(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		ptr<scope_t> scope,
-		const ptr<const types::type_native_ptr_t> &type_native_ptr)
-{
-	return null_impl();
 }
 
 std::vector<llvm::Type *> build_struct_elements(
@@ -160,7 +123,7 @@ std::vector<llvm::Type *> build_struct_elements(
 
 		/* make a name for this inner native struct */
 		std::stringstream ss;
-		ss << "native.struct[";
+		ss << "struct[";
 		join_dimensions(ss, 
 				struct_type->dimensions,
 				struct_type->name_index, {});
@@ -199,7 +162,7 @@ bound_type_t::ref create_bound_struct_type(
 	/* get the pointer type to this, if it exists, get the opaque struct
 	 * pointer that it had created. fill it out. if it doesn't exist,
 	 * create it, then extract this tuple type from that. */
-	types::type_t::ref managed_ptr_type = type_managed_ptr(struct_type);
+	types::type_t::ref managed_ptr_type = type_ptr(struct_type);
 	bound_type_t::ref bound_ref_type = upsert_bound_type(status, builder, scope, managed_ptr_type);
 
 	if (auto bound_type = scope->get_bound_type(struct_type->get_signature())) {
@@ -506,10 +469,8 @@ bound_type_t::ref create_bound_type(
 		return create_bound_id_type(status, builder, scope, id);
     } else if (auto maybe = dyncast<const types::type_maybe_t>(type)) {
 		return create_bound_maybe_type(status, builder, scope, maybe);
-	} else if (auto managed_ptr = dyncast<const types::type_managed_ptr_t>(type)) {
-		return create_bound_managed_ptr_type(status, builder, scope, managed_ptr);
-	} else if (auto native_ptr = dyncast<const types::type_native_ptr_t>(type)) {
-		return create_bound_native_ptr_type(status, builder, scope, native_ptr);
+	} else if (auto ptr_type = dyncast<const types::type_ptr_t>(type)) {
+		return create_bound_ptr_type(status, builder, scope, ptr_type);
 	} else if (auto struct_type = dyncast<const types::type_struct_t>(type)) {
 		return create_bound_struct_type(status, builder, scope, struct_type);
 	} else if (auto function = dyncast<const types::type_function_t>(type)) {
@@ -593,7 +554,7 @@ std::pair<bound_var_t::ref, bound_type_t::ref> instantiate_tuple_ctor(
 	if (!!status) {
 		program_scope_t::ref program_scope = scope->get_program_scope();
 
-		types::type_managed_ptr_t::ref type = type_managed_ptr(type_struct(get_types(args), {} /* name_index */));
+		types::type_ptr_t::ref type = type_ptr(type_struct(get_types(args), {} /* name_index */));
 		bound_type_t::ref data_type = upsert_bound_type(status, builder, scope, type);
 
 		if (!!status) {
@@ -711,7 +672,7 @@ llvm::Value *llvm_call_allocator(
 		std::string name,
 		bound_type_t::refs args)
 {
-	debug_above(5, log(log_info, "calling allocator for %s",
+	debug_above(4, log(log_info, "calling allocator for %s",
 				data_type->str().c_str()));
 	bound_var_t::ref mem_alloc_var = program_scope->get_bound_variable(status,
 			node->get_location(), "__create_var");
@@ -867,15 +828,21 @@ bound_var_t::ref get_or_create_tuple_ctor(
 	}
 
 	/* destructure the ref ptr that this should be */
-	if (auto ref = dyncast<const types::type_managed_ptr_t>(expanded_type)) {
-		expanded_type = ref->element_type;
-	} else if (auto ref = dyncast<const types::type_native_ptr_t>(expanded_type)) {
-		not_impl();
+	if (auto ptr_type = dyncast<const types::type_ptr_t>(expanded_type)) {
+		expanded_type = ptr_type->element_type;
 	} else {
-		user_error(status, id->get_location(), "we should have created a ref type as the return value: %s",
+		user_error(status, id->get_location(), "we should have created a ptr_type type as the return value: %s",
 				expanded_type->str().c_str());
 		return null_impl();
 	}
+
+	upsert_bound_type(status, builder, scope, expanded_type);
+	dbg();
+
+	if (auto deeper_expanded_type = eval(expanded_type, scope->get_typename_env())) {
+		expanded_type = deeper_expanded_type;
+	}
+	debug_above(4, log(log_info, "expanded to %s", expanded_type->str().c_str()));
 
 	/* at this point we should have a struct type in expanded_type */
 	if (auto struct_type = dyncast<const types::type_struct_t>(expanded_type)) {

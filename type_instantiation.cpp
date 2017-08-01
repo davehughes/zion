@@ -58,9 +58,11 @@ bound_var_t::ref bind_ctor_to_scope(
 	debug_above(5, log(log_info, "finding/creating data ctor for " c_type("%s") " with return type %s",
 			id->str().c_str(), function->return_type->str().c_str()));
 
-	debug_above(5, log(log_info, "function return_type %s expands to %s",
-				function->return_type->str().c_str(),
-				eval(function->return_type, scope->get_typename_env())->str().c_str()));
+	/*
+	   debug_above(5, log(log_info, "function return_type %s expands to %s",
+	   function->return_type->str().c_str(),
+	   eval(function->return_type, scope->get_typename_env())->str().c_str()));
+     */
 
 	bound_type_t::refs args = upsert_bound_types(status, builder, scope,
 			function->args->args);
@@ -93,7 +95,7 @@ bound_var_t::ref bind_ctor_to_scope(
 	return nullptr;
 }
 
-types::type_t::ref instantiate_data_ctor_type(
+void instantiate_data_ctor_type(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		types::type_t::ref unbound_type,
@@ -101,59 +103,45 @@ types::type_t::ref instantiate_data_ctor_type(
 		ptr<const ast::item_t> node,
 		identifier::ref id)
 {
-	/* get the name of the ctor */
-	std::string tag_name = id->get_name();
-	std::string fqn_tag_name = scope->make_fqn(tag_name);
-	auto qualified_id = make_iid_impl(fqn_tag_name, id->get_location());
-
-	/* create the tag type */
-	auto tag_type = type_id(qualified_id);
-
 	/* create the basic struct type */
 	ptr<const types::type_struct_t> struct_ = dyncast<const types::type_struct_t>(unbound_type);
 	assert(struct_ != nullptr);
+	assert(struct_->dimensions.size() != 0);
 
-	/* now build the actual typename expansion we'll put in the typename env */
 	/**********************************************/
 	/* Register a data ctor for this struct_ type */
 	/**********************************************/
-	assert(!!status);
 
-	if (struct_->dimensions.size() != 0) {
-		assert(id->get_name() == tag_name);
+	/* we're declaring a ctor at module scope */
+	if (auto module_scope = dyncast<module_scope_t>(scope)) {
 
-		/* we're declaring a ctor at module scope */
-		if (auto module_scope = dyncast<module_scope_t>(scope)) {
+		/* create the actual expanded type signature of this type */
+		types::type_t::ref type = type_ptr(type_id(id));
 
-			/* create the actual expanded type signature of this type */
-			types::type_t::ref type = type_managed_ptr(struct_);
-			auto ctor_return_type = tag_type;
+		/* we need to register this constructor. all ctors return managed ptrs */
+		debug_above(4, log(log_info, "return type for data ctor %s will be %s",
+					id->str().c_str(), type->str().c_str()));
 
-			/* for now assume all ctors return managed ptrs */
-			debug_above(4, log(log_info, "return type for %s will be %s",
-						id->str().c_str(), ctor_return_type->str().c_str()));
+		/* the data constructor will take all of the members of this struct, and
+		 * return a managed pointer to it */
+		types::type_function_t::ref data_ctor_sig = type_function(type_args(struct_->dimensions),
+			   	type);
 
-			/* we need to register this constructor as an override for the name `tag_name` */
-			debug_above(2, log(log_info, "adding %s as an unchecked generic data_ctor",
-						id->str().c_str()));
+		module_scope->get_program_scope()->put_unchecked_variable(id->get_name(),
+				unchecked_data_ctor_t::create(id, node, module_scope, data_ctor_sig));
 
-			types::type_function_t::ref data_ctor_sig = type_function(
-					type_args(struct_->dimensions),
-					ctor_return_type);
+		/* register the typename in the current environment */
+		debug_above(7, log(log_info, "registering type " c_type("%s") " in scope %s",
+					id->get_name().c_str(), scope->get_name().c_str()));
+		scope->put_typename(status, id->get_name(), struct_);
 
-			module_scope->get_program_scope()->put_unchecked_variable(tag_name,
-					unchecked_data_ctor_t::create(id, node, module_scope, data_ctor_sig));
-			return type;
-		} else {
-			user_error(status, node->get_location(), "local type definitions are not yet impl");
-		}
+		return;
 	} else {
-		// This should not happen...
-		not_impl();
+		user_error(status, node->get_location(), "local type definitions are not supported");
 	}
 
 	assert(!status);
-	return nullptr;
+	return;
 }
 
 void ast::struct_t::register_type(
@@ -178,21 +166,11 @@ void ast::struct_t::register_type(
 		auto env_iter = env.find(type_name);
 		if (env_iter == env.end()) {
 			/* instantiate_data_ctor_type has the side-effect of creating an
-			 * unchecked data ctor for the type */
-			auto data_ctor_type = instantiate_data_ctor_type(status, builder,
+			 * unchecked data ctor for the type, and registering the type name */
+			instantiate_data_ctor_type(status, builder,
 					get_type(), scope, shared_from_this(),
 					make_code_id(token_t{token.location, tk_identifier, type_name}));
-
-			if (!!status) {
-				/* register the typename in the current environment */
-				auto qualified_type_name = scope->make_fqn(type_name);
-				debug_above(7, log(log_info, "registering type " c_type("%s") " in scope %s",
-							qualified_type_name.c_str(), scope->get_name().c_str()));
-				scope->put_typename(status, qualified_type_name, data_ctor_type);
-
-				/* success */
-				return;
-			}
+			return;
 		} else {
 			/* simple check for an already bound typename env variable */
 			user_error(status, token.location,
@@ -211,8 +189,5 @@ void ast::polymorph_t::register_type(
 		scope_t::ref scope) const
 {
 	debug_above(3, log(log_info, "creating subtypes to %s", token.text.c_str()));
-
-	scope->put_typename(status,
-		   	scope->make_fqn(get_type_name()),
-		   	get_type());
+	scope->put_typename(status, get_type_name(), get_type());
 }

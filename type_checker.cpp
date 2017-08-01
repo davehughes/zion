@@ -681,11 +681,7 @@ void ast::callsite_expr_t::resolve_statement(
 {
 	auto return_value = resolve_expression(status, builder, scope, life);
 	if (!!status) {
-		if (return_value->get_signature() != "void") {
-			user_error(status, token.location, "call statement must have void return value");
-		} else {
-			return;
-		}
+		return;
 	}
 
 	assert(!status);
@@ -991,9 +987,8 @@ types::type_t::ref eval_to_struct_ref(
 		ast::item_t::ref node,
 		types::type_t::ref type)
 {
-	if (dyncast<const types::type_managed_ptr_t>(type)) {
-		return type;
-	} else if (dyncast<const types::type_native_ptr_t>(type)) {
+	if (dyncast<const types::type_ptr_t>(type)) {
+		assert(!"does this make sense?");
 		return type;
 	} else if (dyncast<const types::type_maybe_t>(type)) {
 		user_error(status, node->get_location(),
@@ -1025,7 +1020,7 @@ types::type_struct_t::ref get_struct_type_from_managed_ptr(
 		ast::item_t::ref node,
 		types::type_t::ref type)
 {
-	if (auto type_managed_ptr = dyncast<const types::type_managed_ptr_t>(type)) {
+	if (auto type_managed_ptr = dyncast<const types::type_ptr_t>(type)) {
 		if (auto struct_type = dyncast<const types::type_struct_t>(type_managed_ptr->element_type)) {
 			return struct_type;
 		} else {
@@ -1557,7 +1552,7 @@ void type_check_all_module_var_slots(
 				program_scope,
 				static_cast<const ast::item_t&>(obj).shared_from_this(),
 				{},
-				program_scope->get_bound_type({"void"}),
+				program_scope->get_bound_type(BUILTIN_VOID_TYPE),
 				"__init_module_vars");
 
 		if (!!status) {
@@ -1789,7 +1784,7 @@ void ast::return_statement_t::resolve_statement(
         }
     } else {
         /* we have an empty return, let's just use void */
-        return_type = scope->get_program_scope()->get_bound_type({"void"});
+        return_type = scope->get_program_scope()->get_bound_type(BUILTIN_VOID_TYPE);
     }
 
     if (!!status) {

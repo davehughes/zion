@@ -633,21 +633,21 @@ ptr<const user_defined_type_t> user_defined_type_t::parse(parse_state_t &ps) {
 	auto type_name = ps.token;
 	ps.advance();
 
-	if (ps.token.is_ident(K(struct))) {
+	if (ps.token.is_ident(K(has))) {
 		return struct_t::parse(ps, type_name);
-	} else if (ps.token.is_ident(K(polymorph))) {
+	} else if (ps.token.is_ident(K(is))) {
 		return polymorph_t::parse(ps, type_name);
 	} else {
 		ps.error(
 				"type descriptions must begin with '%s' or '%s'. (Found %s)",
-				K(struct), K(polymorph),
+				K(has), K(is),
 				ps.token.str().c_str());
 		return nullptr;
 	}
 }
 
 polymorph_t::ref polymorph_t::parse(parse_state_t &ps, token_t type_name) {
-	chomp_ident(K(polymorph));
+	chomp_ident(K(is));
 	chomp_token(tk_lcurly);
 
 	auto polymorph = ast::create<polymorph_t>(type_name);
@@ -671,7 +671,7 @@ polymorph_t::ref polymorph_t::parse(parse_state_t &ps, token_t type_name) {
 }
 
 struct_t::ref struct_t::parse(parse_state_t &ps, token_t type_name) {
-	chomp_ident(K(struct));
+	chomp_ident(K(has));
 	chomp_token(tk_lcurly);
 	auto struct_ = ast::create<struct_t>(type_name);
 	while (ps.token.tk != tk_rcurly) {
@@ -706,10 +706,7 @@ types::type_t::ref parse_type_ref(parse_state_t &ps) {
 		for (auto tk : tks) {
 			switch (tk) {
 			case tk_star:
-				type = type_native_ptr(type);
-				break;
-			case tk_hat:
-				type = type_managed_ptr(type);
+				type = type_ptr(type);
 				break;
 			default:
 				break;

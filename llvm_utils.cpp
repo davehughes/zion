@@ -529,6 +529,7 @@ llvm::Constant *llvm_sizeof_type(llvm::IRBuilder<> &builder, llvm::Type *llvm_ty
 		if (llvm_struct_type->isOpaque()) {
 			debug_above(1, log("llvm_struct_type is opaque when we're trying to get its size: %s",
 						llvm_print(llvm_struct_type).c_str()));
+			dbg();
 			assert(false);
 		}
 		assert(llvm_struct_type->elements().size() != 0);
