@@ -55,12 +55,12 @@ bound_type_t::ref get_bound_type_from_scope(
 				type_name.c_str()));
 	auto bound_type = program_scope->get_bound_type(type_name);
 	if (bound_type != nullptr) {
-		debug_above(8, log(log_info, "yep. %s is bound to %s",
+		debug_above(8, log(log_info, c_good("yep.") " %s is bound to %s",
 					type_name.c_str(),
 					bound_type->str().c_str()));
 		return bound_type;
 	} else {
-		debug_above(8, log(log_info, "nope. %s is not yet bound",
+		debug_above(8, log(log_info, c_warn("nope.") " %s is not yet bound",
 					type_name.c_str()));
 		return nullptr;
 	}

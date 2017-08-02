@@ -30,7 +30,8 @@ struct life_t : std::enable_shared_from_this<life_t> {
 	void track_var(
 			llvm::IRBuilder<> &builder,
 			bound_var_t::ref value,
-			life_form_t track_in_life_form);
+			life_form_t track_in_life_form,
+			scope_t::ref scope);
 
 	/* release values down to and including a particular life_form level */
 	void release_vars(

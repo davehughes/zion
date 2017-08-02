@@ -18,10 +18,6 @@ void reset_generics() {
 	next_generic = 1;
 }
 
-bool is_managed_type_name(std::string type_name) {
-	return !starts_with(type_name, "__") && type_name != "void";
-}
-
 std::string get_name_from_index(const types::name_index_t &name_index, int i) {
 	std::string name;
 	for (auto name_pair : name_index) {
@@ -340,7 +336,7 @@ namespace types {
 	}
 
 	product_kind_t type_ptr_t::get_pk() const {
-		return pk_ref;
+		return pk_ptr;
 	}
 
 	type_t::refs type_ptr_t::get_dimensions() const {
@@ -379,6 +375,58 @@ namespace types {
 	}
 
 	identifier::ref type_ptr_t::get_id() const {
+		return element_type->get_id();
+	}
+
+	type_managed_t::type_managed_t(type_t::ref element_type) :
+		element_type(element_type)
+	{
+#ifdef ZION_DEBUG
+		assert(element_type != nullptr);
+#endif
+	}
+
+	product_kind_t type_managed_t::get_pk() const {
+		return pk_managed;
+	}
+
+	type_t::refs type_managed_t::get_dimensions() const {
+		return {element_type};
+	}
+
+	name_index_t type_managed_t::get_name_index() const {
+		return {};
+	}
+
+	std::ostream &type_managed_t::emit(std::ostream &os, const map &bindings) const {
+		os << "managed{";
+		element_type->emit(os, bindings);
+		os << "}";
+		return os;
+	}
+
+	int type_managed_t::ftv_count() const {
+		return element_type->ftv_count();
+	}
+
+	std::set<std::string> type_managed_t::get_ftvs() const {
+		return element_type->get_ftvs();
+    }
+
+
+	type_t::ref type_managed_t::rebind(const map &bindings) const {
+		if (bindings.size() == 0) {
+			return shared_from_this();
+		}
+
+		return ::type_ptr(element_type->rebind(bindings));
+	}
+
+	location_t type_managed_t::get_location() const {
+		return element_type->get_location();
+	}
+
+	identifier::ref type_managed_t::get_id() const {
 		return element_type->get_id();
 	}
 
@@ -674,6 +722,19 @@ namespace types {
 		}
 		return false;
 	}
+
+	bool is_managed_ptr(types::type_t::ref type, types::type_t::map env) {
+		if (auto expanded_type = eval(type, env)) {
+			type = expanded_type;
+		}
+
+		if (auto ptr_type = dyncast<const types::type_ptr_t>(type)) {
+			if (dyncast<const types::type_managed_t>(ptr_type->element_type)) {
+				return true;
+			}
+		}
+		return false;
+	}
 }
 
 types::type_t::ref type_id(identifier::ref id) {
@@ -742,6 +803,10 @@ types::type_ptr_t::ref type_ptr(types::type_t::ref element_type) {
 	return make_ptr<types::type_ptr_t>(element_type);
 }
 
+types::type_managed_t::ref type_managed(types::type_t::ref element_type) {
+	return make_ptr<types::type_managed_t>(element_type);
+}
+
 types::type_function_t::ref type_function(
 		types::type_args_t::ref args,
 		types::type_t::ref return_type)
@@ -760,7 +825,9 @@ types::type_t::ref type_sum_safe(status_t &status, types::type_t::refs options) 
 			option = maybe->just;
 		}
 		
-		/* check for disallowed types */
+#if 0
+		/* TODO: check for disallowed types, might need to be moved to a pass
+		 * after type registration */
 		if (auto id_type = dyncast<const types::type_id_t>(option)) {
 			auto type_name = id_type->id->get_name();
 			if (!is_managed_type_name(type_name)) {
@@ -770,6 +837,7 @@ types::type_t::ref type_sum_safe(status_t &status, types::type_t::refs options) 
 				return nullptr;
 			}
 		}
+#endif
 		safe_options.push_back(option);
 	}
 
@@ -867,8 +935,10 @@ const char *pkstr(product_kind_t pk) {
 		return "module";
 	case pk_struct:
 		return "struct";
-	case pk_ref:
-		return "ref";
+	case pk_ptr:
+		return "ptr";
+	case pk_managed:
+		return "managed";
 	case pk_args:
 		return "args";
 	}

@@ -180,12 +180,12 @@ bound_var_t::ref create_callsite(
 
 				bound_var_t::ref ret = bound_var_t::create(INTERNAL_LOC(), name,
 						return_type, llvm_call_inst,
-						make_type_id_code_id(INTERNAL_LOC(), name),
+						make_code_id(token_t{INTERNAL_LOC(), tk_identifier, name}),
 						false /*is_lhs*/,
 						false /*is_global*/);
 				/* all return values must be tracked since the callee is
 				 * expected to return a ref-counted value */
-				life->track_var(builder, ret, lf_statement);
+				life->track_var(builder, ret, lf_statement, scope);
 				return ret;
 			}
 		} else {

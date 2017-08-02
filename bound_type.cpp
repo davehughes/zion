@@ -187,14 +187,28 @@ bool bound_type_t::is_module() const {
 	return types::is_type_id(get_type(), "module");
 }
 
-bool bound_type_t::is_managed() const {
-	assert(false);
-#if 0
-	if (auto ptr = dyncast<const types::type_ptr_t>(type)) {
-		return ptr->is_managed();
-	} else 
-#endif
-	return false;
+bool bound_type_t::is_managed_ptr(scope_t::ref scope) const {
+	bool res = types::is_managed_ptr(type, scope->get_typename_env());
+
+	/* get the memory management structure type */
+	auto var = scope->get_bound_type("__var");
+	assert(var != nullptr);
+
+	/* sanity check that the LLVM types are sane with regards to the scope we're
+	 * looking in for the typename environment */
+	if (llvm::PointerType *llvm_pointer_type = llvm::dyn_cast<llvm::PointerType>(get_llvm_specific_type())) {
+		if (llvm::StructType *llvm_struct_type = llvm::dyn_cast<llvm::StructType>(llvm_pointer_type->getElementType())) {
+			auto &elems = llvm_struct_type->elements();
+			assert_implies(res, elems.size() == 2);
+			assert(res == (elems.size() == 2 && var->get_llvm_specific_type() == elems[0]));
+		} else {
+			assert(!res);
+		}
+	} else {
+		assert(!res);
+	}
+
+	return res;
 }
 
 std::string bound_type_t::get_signature() const {

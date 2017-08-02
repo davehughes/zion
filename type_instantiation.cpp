@@ -116,7 +116,7 @@ void instantiate_data_ctor_type(
 	if (auto module_scope = dyncast<module_scope_t>(scope)) {
 
 		/* create the actual expanded type signature of this type */
-		types::type_t::ref type = type_ptr(type_id(id));
+		types::type_t::ref type = type_id(id);
 
 		/* we need to register this constructor. all ctors return managed ptrs */
 		debug_above(4, log(log_info, "return type for data ctor %s will be %s",
@@ -133,7 +133,9 @@ void instantiate_data_ctor_type(
 		/* register the typename in the current environment */
 		debug_above(7, log(log_info, "registering type " c_type("%s") " in scope %s",
 					id->get_name().c_str(), scope->get_name().c_str()));
-		scope->put_typename(status, id->get_name(), struct_);
+		scope->put_typename(status, id->get_name(), type_ptr(type_managed(struct_)));
+
+		// TODO: consider just pushing typename registration to program_scope
 
 		return;
 	} else {

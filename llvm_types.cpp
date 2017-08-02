@@ -139,6 +139,94 @@ std::vector<llvm::Type *> build_struct_elements(
 		return elements;
 }
 
+bound_type_t::ref create_bound_managed_type(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		ptr<scope_t> scope,
+		const ptr<const types::type_managed_t> &managed_type)
+{
+	ptr<program_scope_t> program_scope = scope->get_program_scope();
+
+	if (managed_type->ftv_count() != 0) {
+		debug_above(5, log(log_info,
+					"found abstract type %s when attempting to create a bound type",
+					managed_type->str().c_str()));
+	}
+
+	/* tuples don't have names, so there's no need for a placeholder, as
+	 * they cannot be self referential */
+
+	/* make sure one of these doesn't already exist */
+	assert(!scope->get_bound_type(managed_type->get_signature()));
+
+	/* get the pointer type to this, if it exists, get the opaque struct
+	 * pointer that it had created. fill it out. if it doesn't exist,
+	 * create it, then extract this tuple type from that. */
+	types::type_t::ref managed_ptr_type = type_ptr(managed_type);
+	bound_type_t::ref bound_ref_type = upsert_bound_type(status, builder, scope, managed_ptr_type);
+
+	debug_above(5, log(log_info,
+			"checking whether %s is bound",
+		managed_type->str().c_str()));	
+
+	if (auto bound_type = scope->get_bound_type(managed_type->get_signature())) {
+		/* while instantiating our pointer type, we also instantiated this */
+		return bound_type;
+	}
+
+	if (bound_ref_type != nullptr) {
+		/* fetch the previously created pointer to this type */
+		llvm::PointerType *llvm_pointer_type = llvm::cast<llvm::PointerType>(bound_ref_type->get_llvm_specific_type());
+		assert(llvm_pointer_type != nullptr);
+
+		llvm::StructType *llvm_struct_type = llvm::dyn_cast<llvm::StructType>(llvm_pointer_type->getElementType());
+		assert(llvm_struct_type != nullptr);
+
+		assert(!llvm_struct_type->isSized());
+		assert(llvm_struct_type->isOpaque());
+
+		auto struct_type = dyncast<const types::type_struct_t>(managed_type->element_type);
+		assert(struct_type != nullptr);
+
+		/* ensure that since this type is managed we refer to it generally by
+		 * its managed structure definition (upwards pointer bitcasts happen
+		 * automatically at reference locations) */
+		llvm::Type *llvm_least_specific_type = program_scope->get_bound_type({"__var"})->get_llvm_type();
+
+		/* resolve all of the contained dimensions. NB: cycles should be broken
+		 * by the existence of the pointer to this type */
+		bound_type_t::refs bound_dimensions = upsert_bound_types(status,
+				builder, scope, struct_type->dimensions);
+
+		if (!!status) {
+			/* fill out the internals of this structure INCLUDING the MANAGED var_t */
+			std::vector<llvm::Type *> elements = build_struct_elements(
+					builder, program_scope, struct_type, bound_dimensions);
+
+			/* finally set the elements into the structure */
+			llvm_struct_type->setBody(elements);
+
+			auto bound_type = bound_type_t::create(managed_type,
+					struct_type->get_location(), llvm_least_specific_type,
+					llvm_struct_type);
+
+			/* register this type */
+			program_scope->put_bound_type(status, bound_type);
+
+			if (!!status) {
+				return bound_type;
+			}
+		}
+	} else {
+		user_error(status, managed_type->get_location(),
+				"cyclical type definition? %s",
+				managed_type->str().c_str());
+	}
+
+	assert(!status);
+	return nullptr;
+}
+
 bound_type_t::ref create_bound_struct_type(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
@@ -473,6 +561,8 @@ bound_type_t::ref create_bound_type(
 		return create_bound_ptr_type(status, builder, scope, ptr_type);
 	} else if (auto struct_type = dyncast<const types::type_struct_t>(type)) {
 		return create_bound_struct_type(status, builder, scope, struct_type);
+	} else if (auto managed_type = dyncast<const types::type_managed_t>(type)) {
+		return create_bound_managed_type(status, builder, scope, managed_type);
 	} else if (auto function = dyncast<const types::type_function_t>(type)) {
 		return create_bound_function_type(status, builder, scope, function);
 	} else if (auto sum = dyncast<const types::type_sum_t>(type)) {
@@ -664,7 +754,7 @@ bound_var_t::ref maybe_get_dtor(
 llvm::Value *llvm_call_allocator(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
-	   	program_scope_t::ref program_scope,
+	   	scope_t::ref scope,
 		life_t::ref life,
 	   	const ast::item_t::ref &node,
 		bound_type_t::ref data_type,
@@ -672,6 +762,8 @@ llvm::Value *llvm_call_allocator(
 		std::string name,
 		bound_type_t::refs args)
 {
+	auto program_scope = scope->get_program_scope();
+
 	debug_above(4, log(log_info, "calling allocator for %s",
 				data_type->str().c_str()));
 	bound_var_t::ref mem_alloc_var = program_scope->get_bound_variable(status,
@@ -714,7 +806,7 @@ llvm::Value *llvm_call_allocator(
 			for (size_t i=0; i<args.size(); ++i) {
 				debug_above(5, log(log_info, "args[%d] is %s",
 							i, args[i]->str().c_str()));
-				if (args[i]->is_managed()) {
+				if (args[i]->is_managed_ptr(scope)) {
 					/* this element is managed, so let's store its memory offset in
 					 * our array */
 					debug_above(5, log(log_info, "getting offset of %d in %s",
@@ -836,13 +928,9 @@ bound_var_t::ref get_or_create_tuple_ctor(
 		return null_impl();
 	}
 
-	upsert_bound_type(status, builder, scope, expanded_type);
-	dbg();
-
-	if (auto deeper_expanded_type = eval(expanded_type, scope->get_typename_env())) {
-		expanded_type = deeper_expanded_type;
+	if (auto managed_type = dyncast<const types::type_managed_t>(expanded_type)) {
+		expanded_type = managed_type->element_type;
 	}
-	debug_above(4, log(log_info, "expanded to %s", expanded_type->str().c_str()));
 
 	/* at this point we should have a struct type in expanded_type */
 	if (auto struct_type = dyncast<const types::type_struct_t>(expanded_type)) {
@@ -860,7 +948,7 @@ bound_var_t::ref get_or_create_tuple_ctor(
 
 			if (!!status) {
 				llvm::Value *llvm_alloced = llvm_call_allocator(
-						status, builder, program_scope, life, node, data_type,
+						status, builder, scope, life, node, data_type,
 						struct_type, name, args);
 
 				if (!!status) {
@@ -888,7 +976,7 @@ bound_var_t::ref get_or_create_tuple_ctor(
 									llvm_print(*llvm_gep).c_str()));
 						builder.CreateStore(llvm_param, llvm_gep);
 
-						if (args[index]->is_managed()) {
+						if (args[index]->is_managed_ptr(scope)) {
 							debug_above(5, log(log_info, "inserting call to addref_var for member %d",
 										index));
 

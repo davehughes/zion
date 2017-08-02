@@ -15,17 +15,16 @@ enum product_kind_t {
 	pk_module = 0,
 	pk_args,
 	pk_struct,
-	pk_ref,
+	pk_ptr,
+	pk_managed,
 };
 
 const char *pkstr(product_kind_t pk);
 
 /* used to reset the generic type id counter */
 void reset_generics();
-bool is_managed_type_name(std::string type_name);
 
 namespace types {
-
 	typedef std::map<std::string, int> name_index_t;
 
 	struct type_t : public std::enable_shared_from_this<type_t> {
@@ -62,6 +61,7 @@ namespace types {
 	};
 
 	bool is_type_id(type_t::ref type, std::string type_name);
+	bool is_managed_ptr(types::type_t::ref type, types::type_t::map env);
 
 	struct type_id_t : public type_t {
 		type_id_t(identifier::ref id);
@@ -135,6 +135,25 @@ namespace types {
 		typedef ptr<const type_ptr_t> ref;
 
 		type_ptr_t(type_t::ref element_type);
+
+		virtual product_kind_t get_pk() const;
+		virtual type_t::refs get_dimensions() const;
+		virtual name_index_t get_name_index() const;
+
+		virtual std::ostream &emit(std::ostream &os, const map &bindings) const;
+		virtual int ftv_count() const;
+		virtual std::set<std::string> get_ftvs() const;
+		virtual type_t::ref rebind(const map &bindings) const;
+		virtual location_t get_location() const;
+		virtual identifier::ref get_id() const;
+
+		type_t::ref element_type;
+	};
+
+	struct type_managed_t : public type_product_t {
+		typedef ptr<const type_managed_t> ref;
+
+		type_managed_t(type_t::ref element_type);
 
 		virtual product_kind_t get_pk() const;
 		virtual type_t::refs get_dimensions() const;
@@ -269,6 +288,7 @@ types::type_t::ref type_variable(location_t location);
 types::type_t::ref type_operator(types::type_t::ref operator_, types::type_t::ref operand);
 types::type_module_t::ref type_module(types::type_t::ref module);
 types::type_ptr_t::ref type_ptr(types::type_t::ref element);
+types::type_managed_t::ref type_managed(types::type_t::ref element);
 types::type_struct_t::ref type_struct(types::type_t::refs dimensions, types::name_index_t name_index);
 types::type_args_t::ref type_args(types::type_t::refs args, types::name_index_t name_index={});
 types::type_args_t::ref type_args(identifier::refs ids, types::name_index_t name_index={});

@@ -169,13 +169,13 @@ bound_var_t::ref generate_stack_variable(
 			/* the reference_expr that looks at this llvm_value will need to
 			 * know to use store/load semantics, not just pass-by-value */
 			bound_var_t::ref var_decl_variable = bound_var_t::create(INTERNAL_LOC(), symbol,
-					bound_type, llvm_alloca, make_type_id_code_id(obj.get_location(), obj.get_symbol()),
+					bound_type, llvm_alloca, make_code_id(token_t{obj.get_location(), tk_identifier, obj.get_symbol()}),
 					true /*is_lhs*/, false /*is_global*/);
 
 			/* memory management */
 			call_addref_var(status, builder, scope, var_decl_variable,
 					string_format("variable %s initialization", symbol.c_str()));
-			life->track_var(builder, var_decl_variable, lf_block);
+			life->track_var(builder, var_decl_variable, lf_block, scope);
 
 			/* on our way out, stash the variable in the current scope */
 			scope->put_bound_variable(status, var_decl_variable->name,
@@ -196,7 +196,7 @@ bound_var_t::ref generate_stack_variable(
 					 * whether this was Empty or not... */
 					return bound_var_t::create(INTERNAL_LOC(), symbol,
 							condition_type, init_var->resolve_value(builder),
-							make_type_id_code_id(obj.get_location(), obj.get_symbol()),
+							make_code_id(token_t{obj.get_location(), tk_identifier, obj.get_symbol()}),
 							false /*is_lhs*/,
 							false /*is_global*/);
 				} else {
@@ -470,7 +470,7 @@ function_scope_t::ref make_param_list_scope(
 			call_addref_var(status, builder, scope, param_var, "function parameter lifetime");
 
 			if (!!status) {
-				life->track_var(builder, param_var, lf_function);
+				life->track_var(builder, param_var, lf_function, scope);
 			}
 
 			if (!!status) {
@@ -1654,7 +1654,7 @@ void type_check_assignment(
 			}
 
 			if (!!status) {
-				if (rhs_var->type->is_managed()) {
+				if (rhs_var->type->is_managed_ptr(scope)) {
 					/* only bother addref/release if these are different
 					 * things */
 					if (rhs_var->get_llvm_value() != prior_lhs_value->get_llvm_value()) {
