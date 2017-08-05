@@ -1,0 +1,14 @@
+module _
+link module posix
+
+# test: pass
+
+type X has {
+	x __int__
+}
+
+fn main() {
+	const x = call X(2)
+	const s = call __str__(x.x)
+	call puts(s)
+}

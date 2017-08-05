@@ -22,7 +22,7 @@ rt_gc
 *.pyc
 play/*
 tests/*
-!**/*.zion
+!**/*.llz
 *.zx
 CMakeCache.txt
 CMakeFiles/

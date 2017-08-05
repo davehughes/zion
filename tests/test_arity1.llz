@@ -1,0 +1,10 @@
+module _
+# test: pass
+
+
+fn arity1(variable __int__) void {
+}
+
+fn main() void {
+	call arity1(1)
+}

@@ -1,0 +1,8 @@
+module _
+# test: pass
+
+link module posix
+
+fn main() void {
+  const _ = call puts("Hello world.")
+}

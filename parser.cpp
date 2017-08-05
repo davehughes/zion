@@ -65,7 +65,12 @@ ptr<const var_decl_t> var_decl_t::parse(parse_state_t &ps) {
 	var_decl->constant = constant;
 	ps.advance();
 
-	var_decl->declared_type = parse_type_ref(ps);
+	if (ps.token.tk != tk_assign) {
+		var_decl->declared_type = parse_type_ref(ps);
+	} else {
+		var_decl->declared_type = type_variable(var_decl->token.location);
+	}
+
 	if (!!ps.status) {
 		chomp_token(tk_assign);
 

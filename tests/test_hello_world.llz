@@ -1,0 +1,14 @@
+module hello
+# test: pass
+# expect: Hello, world.
+
+link fn puts(x __str__) void
+
+fn print(x __str__) void {
+	call puts(x)
+}
+
+fn main() __int__ {
+	call print("Hello, world.")
+	return 0
+}

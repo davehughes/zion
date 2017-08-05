@@ -1,0 +1,9 @@
+module _
+link module posix
+
+# test: pass
+
+fn main() {
+	const s = call __str__(1.2)
+	call puts(s)
+}

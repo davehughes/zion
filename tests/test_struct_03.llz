@@ -1,0 +1,13 @@
+module _
+# test: pass
+link module posix
+
+type Vector has {
+	x __float__
+	y __float__
+}
+
+fn main() {
+	const v = call Vector(1.2, 3.4) 
+	const s = call __str__(1.2)
+}

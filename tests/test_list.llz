@@ -1,0 +1,42 @@
+module _
+# test: skip
+
+type NodeInt has {
+	value int
+	next ListInt
+}
+
+type ListInt is {
+	NodeInt
+	Done
+}
+
+fn len(l ListInt) __int__ {
+	match l {
+		Done: {
+			return 0
+		}
+		NodeInt: {
+			return call __plus__(1, call len(l.next))
+		}
+	}
+	return 0
+}
+
+fn sum(l ListInt) int {
+	match l {
+		Done: {
+			return 0
+		}
+		NodeInt: {
+			return call __plus(l.value, call sum(l.next))
+		}
+	}
+	return 0
+}
+
+fn main() void {
+	const l ListInt = call NodeInt(1, call NodeInt(2, call NodeInt(3, Done)))
+	call print(call len(l))
+	call print(call sum(l))
+}

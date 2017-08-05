@@ -1,0 +1,14 @@
+module _
+
+link fn open(x __str__, fd __int__, mode __int__) __int__
+link fn write(fd __int__, x __str__, bytes __int__) __int__
+link fn close(fd __int__) __int__
+
+fn main() void {
+	const O_CREAT  __int__ = 512
+	const O_WRONLY __int__ = 1
+
+	const fd       __int__ = call open("test.txt", call __plus__(O_CREAT, O_WRONLY), 0x444)
+	const res      __int__ = call write(fd, "Hello world.\n", 13)
+	set   res              = call close(fd)
+}

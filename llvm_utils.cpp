@@ -108,43 +108,6 @@ llvm::Value *_llvm_resolve_alloca(llvm::IRBuilder<> &builder, llvm::Value *llvm_
 	}
 }
 
-bound_var_t::ref maybe_load_from_pointer(
-		status_t &status,
-		llvm::IRBuilder<> &builder,
-		ptr<scope_t> scope,
-		bound_var_t::ref var)
-{
-	// TODO: check this codepath when used by globals
-	assert(!var->is_global());
-	if (auto raw = dyncast<const types::type_raw_pointer_t>(var->type->get_type())) {
-		auto bound_type = upsert_bound_type(status, builder, scope, raw->raw);
-		if (!!status) {
-			llvm::Value *llvm_value = var->resolve_value(builder);
-			assert(llvm_value->getType()->isPointerTy());
-			assert(llvm::cast<llvm::PointerType>(llvm_value->getType())->getElementType()->isPointerTy());
-			llvm::Value *llvm_loaded_value = builder.CreateLoad(llvm_value);
-			debug_above(5, log(log_info,
-					   	"maybe_load_from_pointer loaded %s which has type %s",
-						llvm_print(llvm_loaded_value).c_str(),
-						llvm_print(llvm_loaded_value->getType()).c_str()));
-			return bound_var_t::create(
-					INTERNAL_LOC(),
-					string_format("load.%s", var->name.c_str()),
-					bound_type,
-					llvm_loaded_value,
-					var->id,
-					false /*is_lhs*/,
-					false /*is_global*/);
-		}
-	} else {
-		return var;
-	}
-
-	assert(!status);
-	return nullptr;
-}
-
-
 bound_var_t::ref create_callsite(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
