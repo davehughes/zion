@@ -104,7 +104,7 @@ add_test(
 foreach(_test_name
 		test_hello_world
 		)
-	add_test(NAME ${_test_name} COMMAND python ${PROJECT_SOURCE_DIR}/expect.py --compiler ${CMAKE_BINARY_DIR}/llz --program ${PROJECT_SOURCE_DIR}/tests/${_test_name})
+	add_test(NAME ${_test_name} COMMAND python ${PROJECT_SOURCE_DIR}/expect.py --compiler ${CMAKE_BINARY_DIR}/llz --program tests/${_test_name})
 endforeach(_test_name)
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise 
