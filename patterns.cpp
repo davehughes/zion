@@ -16,23 +16,21 @@ void ast::match_block_t::resolve_statement(
 	   	local_scope_t::ref *,
 	   	bool *returns) const
 {
-#if 0
 	assert(life->life_form == lf_statement);
 
 	local_scope_t::ref when_scope;
-	auto pattern_value = value->resolve_statement(status, builder,
-			block_scope, life, &when_scope, returns);
+	auto pattern_value = value->resolve_expression(status, builder,
+			block_scope, life);
 	scope_t::ref current_scope = (when_scope != nullptr) ? when_scope : block_scope;
 	runnable_scope_t::ref runnable_scope = dyncast<runnable_scope_t>(current_scope);
 	if (!!status) {
-		identifier::ref var_name;
-		if (auto ref_expr = dyncast<const ast::reference_expr_t>(value)) {
-			/* this is a single variable reference, which we can override in our pattern_blocks */
-			// TODO: handle assignment (when x := f(a.b.c) ...) to allow for naming more complex expressions
-			var_name = make_code_id(ref_expr->token);
-		} else {
-            user_error(status, value->get_location(), "pattern matching on non variable-reference expressions is not yet impl");
-        }
+		identifier::ref var_name = alias;
+		if (alias == nullptr) {
+			if (auto ref_expr = dyncast<const ast::reference_expr_t>(value)) {
+				/* this is a name which we can override in our pattern_blocks */
+				var_name = make_code_id(ref_expr->token);
+			}
+		}
 
         if (!!status) {
             /* recursively handle nested "else" conditions of the pattern match */
@@ -47,15 +45,14 @@ void ast::match_block_t::resolve_statement(
                     returns,
                     ++iter,
                     pattern_blocks.end(),
-                    else_block);
+                    any_block);
 
             if (!!status) {
                 // TODO: check whether all cases of the pattern_value's type are handled
-                return nullptr;
+                return;
             }
         }
 	}
-#endif
 
 	assert(!status);
 }
@@ -77,11 +74,12 @@ bound_var_t::ref gen_type_check(
 	auto signature = bound_type->get_type()->get_signature();
 	auto type_id_wanted = bound_var_t::create(
 			INTERNAL_LOC(),
-			string_format("typeid(%s)", value_name->str().c_str()),
+			string_format("typeid(%s)", bound_type->str().c_str()),
+			node->get_token().location,
 			program_scope->get_bound_type({TYPEID_TYPE}),
 			llvm_create_int32(builder, (int32_t)atomize(signature)),
-			value_name,
-			false/*is_lhs*/, false /*is_global*/);
+			false/*is_lhs*/,
+		   	false /*is_global*/);
 
 	debug_above(2, log(log_info, "generating a runtime type check "
 				"for type %s with signature value %d (for '%s') (type is %s)",
@@ -108,16 +106,18 @@ bound_var_t::ref gen_type_check(
 					/* replace this bound variable with a version of itself with a new type */
 					(*new_scope)->put_bound_variable(status, value_name->get_name(),
 							bound_var_t::create(
-								value_name->get_location(),
+								INTERNAL_LOC(),
 								value_name->get_name(),
+								value_name->get_location(),
 								bound_type,
 								/* perform a safe runtime cast of this value */
 								value->get_llvm_value(),
-								value_name,
 								/* because this type is more specific than the original,
 								 * we should still be able to assign to it, if it
 								 * intended to be assigned to */
 								value->is_lhs() /*is_lhs*/, false /*is_global*/));
+				} else {
+					not_impl();
 				}
 			}
 
@@ -140,7 +140,7 @@ bound_var_t::ref gen_type_check(
 	return nullptr;
 }
 
-bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
+void ast::pattern_block_t::resolve_pattern_block(
 		status_t &status,
 		llvm::IRBuilder<> &builder,
 		bound_var_t::ref value,
@@ -150,17 +150,14 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 		bool *returns,
 		refs::const_iterator next_iter,
 		refs::const_iterator end_iter,
-		ptr<const ast::block_t> else_block) const
+		ptr<const ast::block_t> any_block) const
 {
-#if 0
 	assert(value != nullptr);
-	assert(value_name != nullptr);
 
 	/* if scope allows us to set up new variables inside if conditions */
 	local_scope_t::ref if_scope;
 
-	assert(token.text == "is");
-	auto type_to_match = this->type_name;
+	auto type_to_match = this->type_match;
 
 	if (!!status) {
 		/* get the bound type for this type pattern */
@@ -178,14 +175,15 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 					return pattern_block_next->resolve_pattern_block(status, builder,
 							value, value_name, scope, life,
 							returns, ++next_iter, end_iter,
-							else_block);
-				} else if (else_block != nullptr) {
-					return else_block->resolve_statement(status, builder,
+							any_block);
+				} else if (any_block != nullptr) {
+					any_block->resolve_statement(status, builder,
 							scope, life, nullptr, returns);
+					return;
 				}
 
 				/* we've got nothing else to match on, so, let's bail */
-				return nullptr;
+				return;
 			}
 
 			/* evaluate the condition for branching */
@@ -209,9 +207,9 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 					/* we have to keep track of whether we need a merge block
 					 * because our nested branches could all return */
 					bool insert_merge_bb = false;
-					bool else_block_returns = false;
+					bool any_block_returns = false;
 
-					if ((next_iter != end_iter) || (else_block != nullptr)) {
+					if ((next_iter != end_iter) || (any_block != nullptr)) {
 						/* we've got an else block, so let's create an "else" basic block. */
 						llvm::BasicBlock *else_bb = llvm::BasicBlock::Create(builder.getContext(), "pattern.else", llvm_function_current);
 
@@ -228,14 +226,14 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 								auto pattern_block_next = *next_iter;
 								pattern_block_next->resolve_pattern_block(status, builder,
 										value, value_name, scope, life,
-										&else_block_returns, ++next_iter, end_iter,
-										else_block);
+										&any_block_returns, ++next_iter, end_iter,
+										any_block);
 							} else {
-								else_block->resolve_statement(status, builder,
-										scope, life, nullptr, &else_block_returns);
+								any_block->resolve_statement(status, builder,
+										scope, life, nullptr, &any_block_returns);
 							}
 
-							if (!else_block_returns) {
+							if (!any_block_returns) {
 								/* keep track of the fact that we have to have a
 								 * merged block to land in after the else block */
 								insert_merge_bb = true;
@@ -248,7 +246,7 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 						}
 					} else {
 						/* since there is no else block it cannot return */
-						else_block_returns = false;
+						any_block_returns = false;
 
 						/* keep track of the fact that we have to have a merged
 						 * block to land in after the if block */
@@ -287,18 +285,17 @@ bound_var_t::ref ast::pattern_block_t::resolve_pattern_block(
 							}
 
 							/* track whether the branches return */
-							*returns |= (if_block_returns && else_block_returns);
+							*returns |= (if_block_returns && any_block_returns);
 
 							assert(!!status);
-							return nullptr;
+							return;
 						}
 					}
 				}
 			}
 		}
 	}
-#endif
 
 	assert(!status);
-    return nullptr;
+    return;
 }

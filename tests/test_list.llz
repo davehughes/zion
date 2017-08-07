@@ -1,6 +1,8 @@
 module _
 # test: skip
 
+type Done tag
+
 type NodeInt has {
 	value int
 	next ListInt
@@ -23,7 +25,7 @@ fn len(l ListInt) __int__ {
 	return 0
 }
 
-fn sum(l ListInt) int {
+fn sum(l ListInt) __int__ {
 	match l {
 		Done: {
 			return 0

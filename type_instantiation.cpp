@@ -146,6 +146,46 @@ void instantiate_data_ctor_type(
 	return;
 }
 
+void ast::tag_t::register_type(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		scope_t::ref scope) const
+{
+	std::string tag_name = token.text;
+
+	auto tag_type = type_ptr(type_managed(type_struct({}, {})));
+
+	/* it's a nullary enumeration or "tag", let's create a global value to
+	 * represent this tag. */
+
+	/* start by making a type for the tag */
+	bound_type_t::ref bound_tag_type = bound_type_t::create(
+			tag_type,
+			token.location,
+			/* all tags use the var_t* type */
+			scope->get_program_scope()->get_bound_type({"__var_ref"})->get_llvm_type());
+
+	scope->get_program_scope()->put_bound_type(status, bound_tag_type);
+	if (!!status) {
+		bound_var_t::ref tag = llvm_create_global_tag(
+				builder, scope, bound_tag_type, tag_name,
+				make_code_id(token));
+
+		/* record this tag variable for use later */
+		scope->get_program_scope()->put_bound_variable(status, tag_name, tag);
+		scope->put_typename(status, tag_name, tag_type);
+
+		if (!!status) {
+			debug_above(7, log(log_info, "instantiated nullary data ctor %s",
+						tag->str().c_str()));
+			return;
+		}
+	}
+
+	assert(!status);
+	return;
+}
+
 void ast::struct_t::register_type(
 		status_t &status,
 		llvm::IRBuilder<> &builder,

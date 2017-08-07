@@ -1,0 +1,29 @@
+module _
+# test: pass
+
+link module posix
+
+tag True
+tag False
+
+type bool is {
+	True
+	False
+}
+
+fn fib() {
+	const x = False
+	match x {
+		True: {
+			call puts("true")
+		}
+		False: {
+			call puts("true")
+		}
+	}
+}
+
+
+fn main() {
+	call fib()
+}

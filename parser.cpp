@@ -450,14 +450,28 @@ ptr<const loop_block_t> loop_block_t::parse(parse_state_t &ps) {
 ptr<const match_block_t> match_block_t::parse(parse_state_t &ps) {
 	auto match_block = create<ast::match_block_t>(ps.token);
 	chomp_ident(K(match));
-	match_block->value = reference_expr_t::parse(ps);
+	match_block->value = expression_t::parse(ps);
+	if (ps.token.is_ident(K(as))) {
+		ps.advance();
+		expect_token(tk_identifier);
+		match_block->alias = make_code_id(ps.token);
+		ps.advance();
+	}
+
 	if (!!ps.status) {
 		chomp_token(tk_lcurly);
 		while (ps.token.tk == tk_identifier) {
-			auto pattern_block = pattern_block_t::parse(ps);
-			if (!!ps.status) {
-				match_block->pattern_blocks.push_back(pattern_block);
+			if (ps.token.text != "_") {
+				auto pattern_block = pattern_block_t::parse(ps);
+				if (!!ps.status) {
+					match_block->pattern_blocks.push_back(pattern_block);
+				} else {
+					break;
+				}
 			} else {
+				ps.advance();
+				chomp_token(tk_colon);
+				match_block->any_block = block_t::parse(ps);
 				break;
 			}
 		}
@@ -642,6 +656,9 @@ ptr<const user_defined_type_t> user_defined_type_t::parse(parse_state_t &ps) {
 		return struct_t::parse(ps, type_name);
 	} else if (ps.token.is_ident(K(is))) {
 		return polymorph_t::parse(ps, type_name);
+	} else if (ps.token.is_ident(K(tag))) {
+		ps.advance();
+		return create<ast::tag_t>(type_name);
 	} else {
 		ps.error(
 				"type descriptions must begin with '%s' or '%s'. (Found %s)",
@@ -660,7 +677,6 @@ polymorph_t::ref polymorph_t::parse(parse_state_t &ps, token_t type_name) {
 		auto subtype = parse_type_ref(ps);
 		if (!!ps.status) {
 			polymorph->subtypes.push_back(subtype);
-			ps.advance();
 		} else {
 			break;
 		}

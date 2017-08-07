@@ -231,6 +231,18 @@ namespace ast {
 		virtual types::type_t::ref get_type() const = 0;
 	};
 
+	struct tag_t : public item_impl_t<user_defined_type_t> {
+		typedef ptr<const tag_t> ref;
+
+		virtual ~tag_t() throw() {}
+		virtual void register_type(
+				status_t &status,
+				llvm::IRBuilder<> &builder,
+				scope_t::ref scope) const;
+		virtual std::string get_type_name() const;
+		virtual types::type_t::ref get_type() const;
+	};
+
 	struct polymorph_t : public item_impl_t<user_defined_type_t> {
 		typedef ptr<const polymorph_t> ref;
 
@@ -381,12 +393,12 @@ namespace ast {
 		ptr<const block_t> block;
 	};
 
-	struct pattern_block_t : public item_impl_t<item_t> {
+	struct pattern_block_t : public std::enable_shared_from_this<pattern_block_t>, public item_impl_t<item_t> {
 		typedef ptr<const pattern_block_t> ref;
 		typedef std::vector<ref> refs;
 
 		static ref parse(parse_state_t &ps);
-		virtual bound_var_t::ref resolve_pattern_block(
+		virtual void resolve_pattern_block(
 				status_t &status,
 				llvm::IRBuilder<> &builder,
 				bound_var_t::ref value,
@@ -414,8 +426,10 @@ namespace ast {
 				local_scope_t::ref *new_scope,
 				bool *returns) const;
 
-		ptr<const reference_expr_t> value;
+		ptr<const expression_t> value;
+		identifier::ref alias;
 		pattern_block_t::refs pattern_blocks;
+		ptr<const block_t> any_block;
 	};
 
 	struct module_decl_t : public item_impl_t<item_t> {

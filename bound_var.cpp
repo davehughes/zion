@@ -6,7 +6,7 @@
 std::string bound_var_t::str() const {
 	std::stringstream ss;
 	ss << C_VAR << name << C_RESET;
-	ss << " : " << id->str();
+	ss << " : " << location.str();
 	ss << " : " << *type;
 
 	assert(llvm_value != nullptr);
@@ -23,7 +23,7 @@ std::string bound_var_t::str() const {
 }
 
 location_t bound_var_t::get_location() const {
-	return id->get_location();
+	return location;
 }
 
 bool bound_var_t::is_lhs() const {
@@ -64,10 +64,10 @@ llvm::Value *bound_var_t::resolve_value(llvm::IRBuilder<> &builder) const {
 bound_var_t::ref bound_var_t::resolve_bound_value(llvm::IRBuilder<> &builder) const {
 	return bound_var_t::create(
 			INTERNAL_LOC(),
-			this->name,
+			name,
+			location,
 			type,
 			resolve_value(builder),
-			this->id,
 			false /*is_lhs*/,
 			false /*is_global*/);
 }
@@ -101,9 +101,9 @@ bound_module_t::bound_module_t(
 		module_scope_t::ref module_scope) :
 	bound_var_t(internal_location,
 			name, 
+			id->get_location(),
 			module_scope->get_bound_type({"module"}),
 			module_scope->get_program_scope()->get_singleton("nil")->get_llvm_value(),
-			id,
 			false /*is_lhs*/,
 			false /*is_global*/),
 	module_scope(module_scope)

@@ -247,9 +247,9 @@ void rt_bind_var_from_llir(
 					bound_var_t::create(
 						INTERNAL_LOC(),
 						name,
+						INTERNAL_LOC(),
 						bound_type,
 						llvm_function,
-						make_iid(name),
 						false /*is_lhs*/,
 						false /*is_global*/));
 		}
@@ -432,19 +432,24 @@ void add_globals(
 	bound_type_t::ref next_var_type = program_scope->get_bound_type({"__next_var"});
 
 
-	program_scope->put_bound_variable(status, "__true__", bound_var_t::create(INTERNAL_LOC(), "__true__", bool_type, builder.getInt64(1/*true*/), make_iid("__true__"), false/*is_lhs*/, false /*is_global*/));
+	program_scope->put_bound_variable(status, "__true__", bound_var_t::create(INTERNAL_LOC(), "__true__", INTERNAL_LOC(), bool_type, builder.getInt64(1/*true*/), false/*is_lhs*/, false /*is_global*/));
 	assert(!!status);
 
-	program_scope->put_bound_variable(status, "__false__", bound_var_t::create(INTERNAL_LOC(), "__false__", bool_type, builder.getInt64(0/*false*/), make_iid("__false__"), false/*is_lhs*/, false /*is_global*/));
+	program_scope->put_bound_variable(status, "__false__", bound_var_t::create(INTERNAL_LOC(), "__false__", INTERNAL_LOC(), bool_type, builder.getInt64(0/*false*/), false/*is_lhs*/, false /*is_global*/));
 	assert(!!status);
 
 	/* get the nil pointer value cast as our __var_ref type */
 	llvm::Type *llvm_nil_type = program_scope->get_bound_type({"__var_ref"})->get_llvm_type();
 	llvm::Constant *llvm_nil_value = llvm::Constant::getNullValue(llvm_nil_type);
 	program_scope->put_bound_variable(
-			status, "nil", bound_var_t::create(INTERNAL_LOC(), "nil",
-				nil_type, llvm_nil_value, make_iid("nil"),
-				false /*is_lhs*/, false /*is_global*/));
+			status, "nil", bound_var_t::create(
+				INTERNAL_LOC(),
+			   	"nil",
+				INTERNAL_LOC(),
+				nil_type,
+			   	llvm_nil_value,
+				false /*is_lhs*/,
+			   	false /*is_global*/));
 	assert(!!status);
 
 	if (!!status) {

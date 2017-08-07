@@ -59,6 +59,7 @@ const char * const K_sizeof = "sizeof";
 const char * const K_type = "type";
 const char * const K_has = "has";
 const char * const K_is = "is";
+const char * const K_tag = "tag";
 #define K(x) K_##x
 
 struct token_t {

@@ -15,22 +15,21 @@ struct bound_var_t : public var_t {
 	bound_var_t(
 			location_t internal_location,
 			std::string name,
+			location_t location,
 			bound_type_t::ref type,
 			llvm::Value *llvm_value,
-			identifier::ref id,
 			bool is_lhs,
 			bool is_global) :
 	   	internal_location(internal_location),
 	   	name(name),
+		location(location),
 	   	type(type),
 	   	llvm_value(llvm_value),
-	   	id(id),
 		_is_lhs(is_lhs),
 		_is_global(is_global)
    	{
 		assert(name.size() != 0);
 		assert(llvm_value != nullptr);
-		assert(id != nullptr);
 		assert(type != nullptr);
 		assert_implies(llvm::dyn_cast<llvm::GlobalVariable>(llvm_value) != nullptr, is_global);
 		assert_implies(llvm::dyn_cast<llvm::AllocaInst>(llvm_value) != nullptr, is_lhs);
@@ -38,15 +37,15 @@ struct bound_var_t : public var_t {
 
 	virtual ~bound_var_t() throw() {}
 
-	location_t internal_location;
-	std::string const name;
+	location_t        const internal_location;
+	std::string       const name;
+	location_t        const location;
 	bound_type_t::ref const type;
-	identifier::ref const id;
 
 private:
-	llvm::Value * const llvm_value;
-	bool const _is_lhs;
-	bool const _is_global;
+	llvm::Value     * const llvm_value;
+	bool              const _is_lhs;
+	bool              const _is_global;
 
 public:
 	llvm::Value *get_llvm_value() const;
@@ -73,13 +72,13 @@ public:
 	static ref create(
 			location_t internal_location,
 			std::string name,
+			location_t location,
 			bound_type_t::ref type,
 			llvm::Value *llvm_value,
-			identifier::ref id,
 			bool is_lhs,
 			bool is_global)
 	{
-		return make_ptr<bound_var_t>(internal_location, name, type, llvm_value, id, is_lhs, is_global);
+		return make_ptr<bound_var_t>(internal_location, name, location, type, llvm_value, is_lhs, is_global);
 	}
 
 	static std::string str(const refs &coll) {

@@ -141,11 +141,15 @@ bound_var_t::ref create_callsite(
 			if (!!status) {
 				bound_type_t::ref return_type = get_function_return_type(scope, function->type);
 
-				bound_var_t::ref ret = bound_var_t::create(INTERNAL_LOC(), name,
-						return_type, llvm_call_inst,
-						make_code_id(token_t{INTERNAL_LOC(), tk_identifier, name}),
+				bound_var_t::ref ret = bound_var_t::create(
+						INTERNAL_LOC(),
+					   	name,
+					   	location,
+						return_type,
+					   	llvm_call_inst,
 						false /*is_lhs*/,
 						false /*is_global*/);
+
 				/* all return values must be tracked since the callee is
 				 * expected to return a ref-counted value */
 				life->track_var(builder, ret, lf_statement, scope);
@@ -543,8 +547,11 @@ bound_var_t::ref llvm_start_function(status_t &status,
 
 			/* create the actual bound variable for the fn */
 			bound_var_t::ref function = bound_var_t::create(
-					INTERNAL_LOC(), name,
-					function_type, llvm_function, make_code_id(node->get_token()),
+					INTERNAL_LOC(),
+				   	name,
+					node->get_token().location,
+					function_type,
+				   	llvm_function,
 					false /*is_lhs*/,
 					false /*is_global*/);
 
@@ -678,8 +685,14 @@ bound_var_t::ref llvm_create_global_tag(
 	llvm::Constant *llvm_tag_value = llvm::ConstantExpr::getPointerCast(
 			llvm_tag_constant, llvm_var_ref_type);
 
-	return bound_var_t::create(INTERNAL_LOC(), tag, tag_type, llvm_tag_value,
-			id, false /*is_lhs*/, false /*is_global*/);
+	return bound_var_t::create(
+			INTERNAL_LOC(),
+		   	tag,
+		   	id->get_location(),
+		   	tag_type,
+		   	llvm_tag_value,
+			false /*is_lhs*/,
+		   	false /*is_global*/);
 }
 
 llvm::Value *llvm_maybe_pointer_cast(

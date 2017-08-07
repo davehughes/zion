@@ -88,4 +88,12 @@ namespace ast {
 	types::type_t::ref polymorph_t::get_type() const {
 		return type_sum(subtypes);
 	}
+
+	std::string ast::tag_t::get_type_name() const {
+		return token.text;
+	}
+
+	types::type_t::ref ast::tag_t::get_type() const {
+		return type_ptr(type_managed(type_id(make_code_id(token))));
+	}
 }

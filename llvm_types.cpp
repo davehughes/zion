@@ -989,10 +989,11 @@ bound_var_t::ref get_or_create_tuple_ctor(
 									bound_var_t::create(
 										INTERNAL_LOC(),
 										"temp_ctor_dim",
+										INTERNAL_LOC(),
 										args[index],
 										llvm_param,
-										make_iid("ctor_dim_value"),
-										false /*is_lhs*/, false /*is_global*/),
+										false /*is_lhs*/,
+									   	false /*is_global*/),
 									string_format("incrementing refcount of member %d on %s",
 										index, struct_type->str().c_str()));
 
@@ -1046,9 +1047,9 @@ bound_var_t::ref type_check_get_item_with_int_literal(
 		bound_var_t::ref index = bound_var_t::create(
 				INTERNAL_LOC(),
 				"temp_deref_index",
+				index_id->get_location(),
 				scope->get_program_scope()->get_bound_type({INT_TYPE}),
 				llvm_create_int(builder, subscript_index),
-				index_id,
 				false/*is_lhs*/, false /*is_global*/);
 
 		/* get or instantiate a function we can call on these arguments */
@@ -1125,10 +1126,11 @@ bound_var_t::ref call_const_subscript_operator(
 				return bound_var_t::create(
 						INTERNAL_LOC(),
 						"temp_deref_subscript",
+						node->get_token().location,
 						data_type,
 						llvm_value,
-						make_code_id(node->get_token()),
-						false/*is_lhs*/, false /*is_global*/);
+						false /*is_lhs*/,
+					   	false /*is_global*/);
 			}
 		} else {
 			user_error(status, node, "index out of range");

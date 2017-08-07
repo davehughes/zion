@@ -168,9 +168,14 @@ bound_var_t::ref generate_stack_variable(
 		if (!!status) {
 			/* the reference_expr that looks at this llvm_value will need to
 			 * know to use store/load semantics, not just pass-by-value */
-			bound_var_t::ref var_decl_variable = bound_var_t::create(INTERNAL_LOC(), symbol,
-					bound_type, llvm_alloca, make_code_id(token_t{obj.get_location(), tk_identifier, obj.get_symbol()}),
-					true /*is_lhs*/, false /*is_global*/);
+			bound_var_t::ref var_decl_variable = bound_var_t::create(
+					INTERNAL_LOC(),
+				   	symbol,
+					obj.get_location(),
+					bound_type,
+				   	llvm_alloca,
+					true /*is_lhs*/,
+				   	false /*is_global*/);
 
 			/* memory management */
 			call_addref_var(status, builder, scope, var_decl_variable,
@@ -194,9 +199,12 @@ bound_var_t::ref generate_stack_variable(
 
 					/* we're unboxing a Maybe{any}, so let's return
 					 * whether this was Empty or not... */
-					return bound_var_t::create(INTERNAL_LOC(), symbol,
-							condition_type, init_var->resolve_value(builder),
-							make_code_id(token_t{obj.get_location(), tk_identifier, obj.get_symbol()}),
+					return bound_var_t::create(
+							INTERNAL_LOC(),
+						   	symbol,
+							obj.get_location(),
+							condition_type,
+						   	init_var->resolve_value(builder),
 							false /*is_lhs*/,
 							false /*is_global*/);
 				} else {
@@ -302,8 +310,12 @@ bound_var_t::ref generate_module_variable(
 			if (!!status) {
 				/* the reference_expr that looks at this llvm_value will need to
 				 * know to use store/load semantics, not just pass-by-value */
-				bound_var_t::ref var_decl_variable = bound_var_t::create(INTERNAL_LOC(), symbol,
-						bound_type, llvm_global_variable, make_code_id(obj.token),
+				bound_var_t::ref var_decl_variable = bound_var_t::create(
+						INTERNAL_LOC(),
+					   	symbol,
+						obj.token.location,
+						bound_type,
+					   	llvm_global_variable,
 						false /*is_lhs*/, true /*is_global*/);
 
 				/* on our way out, stash the variable in the current scope */
@@ -457,9 +469,14 @@ function_scope_t::ref make_param_list_scope(
 						llvm_print(llvm_param).c_str()));
 			builder.CreateStore(llvm_param, llvm_alloca);	
 
-			auto param_var = bound_var_t::create(INTERNAL_LOC(), param.first, param.second,
-					llvm_alloca, make_code_id(function_decl.params[i++]->token),
-					true /*is_lhs*/, false /*is_global*/);
+			auto param_var = bound_var_t::create(
+					INTERNAL_LOC(),
+				   	param.first,
+					function_decl.params[i++]->token.location,
+				   	param.second,
+					llvm_alloca,
+					true /*is_lhs*/,
+				   	false /*is_global*/);
 
 			bound_type_t::ref return_type = get_function_return_type(scope, function_var->type);
 
@@ -576,9 +593,9 @@ bound_var_t::ref ast::link_function_statement_t::resolve_linked_function(
 			return bound_var_t::create(
 					INTERNAL_LOC(),
 				   	scope->make_fqn(function_name.text),
+					extern_function->token.location,
 				   	bound_function_type,
 				   	llvm_value,
-				   	make_code_id(extern_function->token),
 				   	false /*is_lhs*/,
 				   	false /*is_global*/);
 		}
@@ -730,8 +747,9 @@ bound_var_t::ref extract_member_variable(
 		life_t::ref life,
 		ast::item_t::ref node,
 		bound_var_t::ref var,
-		std::string member_name)
+		identifier::ref member_id)
 {
+	auto member_name = member_id->get_name();
 	types::type_t::ref expansion = eval(var->type->get_type(), scope->get_typename_env());
 	debug_above(5, log(log_info, "try to get outer struct from instance of type " c_type("%s"),
 				expansion->str().c_str()));
@@ -800,8 +818,12 @@ bound_var_t::ref extract_member_variable(
 					llvm_item->setName(value_name);
 
 					return bound_var_t::create(
-							INTERNAL_LOC(), value_name,
-							member_type, llvm_item, make_iid(member_name), false /*is_lhs*/,
+							INTERNAL_LOC(),
+						   	value_name,
+							member_id->get_location(),
+							member_type,
+						   	llvm_item,
+						   	false /*is_lhs*/,
 							false /*is_global*/);
 				} else {
 					auto full_type = var->type->get_type()->rebind({});
@@ -940,7 +962,7 @@ bound_var_t::ref ast::reference_expr_t::resolve_expression(
 					life,
 					shared_from_this(),
 					var,
-					path_item->get_name());
+					path_item);
 
 			if (!status) {
 				user_error(status, get_location(),
@@ -1210,10 +1232,10 @@ bound_var_t::ref ast::ternary_expr_t::resolve_expression(
 
 									return bound_var_t::create(
 											INTERNAL_LOC(),
-											{"ternary.value"},
+											"ternary.value",
+											this->token.location,
 											ternary_type,
 											llvm_phi_node,
-											make_code_id(this->token),
 											false /* is_lhs */, false /*is_global*/);
 								}
 							}
@@ -1329,10 +1351,11 @@ bound_var_t::ref call_typeid(
 		return bound_var_t::create(
 				INTERNAL_LOC(),
 				string_format("typeid(%s)", resolved_value->str().c_str()),
+				id->get_location(),
 				program_scope->get_bound_type({TYPEID_TYPE}),
 				llvm_create_int32(builder, iatom),
-				id,
-				false/*is_lhs*/, false /*is_global*/);
+				false /*is_lhs*/,
+			   	false /*is_global*/);
 	}
 
 	assert(!status);
@@ -1371,8 +1394,13 @@ bound_var_t::ref ast::sizeof_expr_t::resolve_expression(
 				llvm_deref_type(bound_type->get_llvm_specific_type()));
 
 		return bound_var_t::create(
-				INTERNAL_LOC(), type->str(), size_type, llvm_size,
-				make_iid("sizeof"), false /*is_lhs*/, false /*is_global*/);
+				INTERNAL_LOC(),
+			   	type->str(),
+				this->get_token().location,
+			   	size_type,
+			   	llvm_size,
+			   	false /*is_lhs*/,
+			   	false /*is_global*/);
 	}
 
 	assert(!status);
@@ -1466,8 +1494,13 @@ bound_var_t::ref ast::function_defn_t::instantiate_with_args_and_return_type(
 
 		/* set up the mapping to this function for use in recursion */
 		bound_var_t::ref function_var = bound_var_t::create(
-				INTERNAL_LOC(), token.text, bound_function_type, llvm_function,
-				make_code_id(token), false/*is_lhs*/, false /*is_global*/);
+				INTERNAL_LOC(),
+			   	token.text,
+				token.location,
+			   	bound_function_type,
+			   	llvm_function,
+			   	false /*is_lhs*/,
+			   	false /*is_global*/);
 
 		/* we should be able to check its block as a callsite. note that this
 		 * code will also run for generics but only after the
@@ -2342,9 +2375,12 @@ bound_var_t::ref ast::literal_expr_t::resolve_expression(
 			}
 			bound_type_t::ref native_type = program_scope->get_bound_type({INT_TYPE});
 			return bound_var_t::create(
-					INTERNAL_LOC(), "raw_int_literal", native_type,
+					INTERNAL_LOC(),
+				   	"raw_int_literal",
+				   	token.location,
+				   	native_type,
 					llvm_create_int(builder, value),
-					make_code_id(token), false /*is_lhs*/,
+				   	false /*is_lhs*/,
 					false /*is_global*/);
         }
 		break;
@@ -2353,9 +2389,12 @@ bound_var_t::ref ast::literal_expr_t::resolve_expression(
 			std::string value = unescape_json_quotes(token.text);
 			bound_type_t::ref native_type = program_scope->get_bound_type({STR_TYPE});
 			return bound_var_t::create(
-					INTERNAL_LOC(), "raw_str_literal", native_type,
+					INTERNAL_LOC(),
+				   	"raw_str_literal",
+					token.location,
+				   	native_type,
 					llvm_create_global_string(builder, value),
-					make_code_id(token), false /*is_lhs*/,
+				   	false /*is_lhs*/,
 					false /*is_global*/);
 		}
 		break;
@@ -2364,9 +2403,12 @@ bound_var_t::ref ast::literal_expr_t::resolve_expression(
 			double value = atof(token.text.c_str());
 			bound_type_t::ref native_type = program_scope->get_bound_type({FLOAT_TYPE});
 			return bound_var_t::create(
-					INTERNAL_LOC(), "raw_float_literal", native_type,
+					INTERNAL_LOC(),
+				   	"raw_float_literal",
+					token.location,
+				   	native_type,
 					llvm_create_double(builder, value),
-					make_code_id(token), false/*is_lhs*/,
+				   	false/*is_lhs*/,
 					false /*is_global*/);
 		}
 		break;
@@ -2422,8 +2464,12 @@ bound_var_t::ref ast::cast_expr_t::resolve_expression(
 			llvm::Value *llvm_var_value = llvm_maybe_pointer_cast(builder,
 					bound_var->resolve_value(builder), bound_type);
 
-			return bound_var_t::create(INTERNAL_LOC(), "cast",
-					bound_type, llvm_var_value, make_iid("cast"),
+			return bound_var_t::create(
+					INTERNAL_LOC(),
+				   	"cast",
+					token.location,
+					bound_type,
+				   	llvm_var_value,
 					false /*is_lhs*/,
 					false /*is_global*/);
 		}
