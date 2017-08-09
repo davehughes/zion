@@ -1,10 +1,11 @@
 module _
+link module posix
 # test: skip
 
 type Done tag
 
 type NodeInt has {
-	value int
+	value __int__
 	next ListInt
 }
 
@@ -31,7 +32,7 @@ fn sum(l ListInt) __int__ {
 			return 0
 		}
 		NodeInt: {
-			return call __plus(l.value, call sum(l.next))
+			return call __plus__(l.value, call sum(l.next))
 		}
 	}
 	return 0
@@ -39,6 +40,6 @@ fn sum(l ListInt) __int__ {
 
 fn main() void {
 	const l ListInt = call NodeInt(1, call NodeInt(2, call NodeInt(3, Done)))
-	call print(call len(l))
-	call print(call sum(l))
+	call puts(call __str__(call len(l)))
+	call puts(call __str__(call sum(l)))
 }

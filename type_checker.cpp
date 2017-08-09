@@ -740,6 +740,87 @@ types::type_t::ref eval_to_struct_ref(
 }
 #endif
 
+bound_var_t::ref extract_member_core(
+		status_t &status,
+		llvm::IRBuilder<> &builder,
+		scope_t::ref scope,
+		bound_var_t::ref var,
+		location_t location,
+		types::type_struct_t::ref struct_,
+		std::string member_name,
+		bound_type_t::ref bound_expansion_type,
+		bool managed)
+{
+	auto member_index = struct_->name_index;
+	auto member_index_iter = member_index.find(member_name);
+
+	for (auto member_index_pair : member_index) {
+		debug_above(5, log(log_info, "%s: %d", member_index_pair.first.c_str(),
+					member_index_pair.second));
+	}
+
+	if (member_index_iter != member_index.end()) {
+		auto index = member_index_iter->second;
+		debug_above(5, log(log_info, "found member " c_id("%s") " of type %s at index %d",
+					member_name.c_str(),
+					var->type->str().c_str(), index));
+
+		/* get the type of the dimension being referenced */
+		bound_type_t::ref member_type = scope->get_bound_type(
+				struct_->dimensions[index]->get_signature());
+
+		auto expanded = eval(var->type->get_type(), scope->get_typename_env());
+		debug_above(5, log(log_info, "looking at bound_var %s : %s (%s)",
+					var->str().c_str(),
+					expanded->str().c_str(),
+					llvm_print(var->type->get_llvm_type()).c_str()));
+
+		/* the following code is heavily coupled to the physical layout of
+		 * managed vs. native structures */
+
+		llvm::Value *llvm_var_value = var->resolve_value(builder);
+		assert(llvm_var_value->getType()->isPointerTy());
+		llvm_var_value = llvm_maybe_pointer_cast(builder, llvm_var_value,
+				bound_expansion_type->get_llvm_specific_type());
+
+		/* GEP and load the member value from the structure */
+		llvm::Value *llvm_gep = llvm_make_gep(builder,
+				llvm_var_value, index, managed);
+		if (llvm_gep->getName().str().size() == 0) {
+			llvm_gep->setName(string_format("address_of.%s", member_name.c_str()));
+		}
+
+		llvm::Value *llvm_item = builder.CreateLoad(llvm_gep);
+
+		/* add a helpful descriptive name to this local value */
+		auto value_name = string_format(".%s", member_name.c_str());
+		llvm_item->setName(value_name);
+
+		return bound_var_t::create(
+				INTERNAL_LOC(),
+				value_name,
+				location,
+				member_type,
+				llvm_item,
+				false /*is_lhs*/,
+				false /*is_global*/);
+	} else {
+		auto full_type = var->type->get_type()->rebind({});
+		user_error(status, location,
+				"%s has no dimension called " c_id("%s"),
+				full_type->str().c_str(),
+				member_name.c_str());
+		user_message(log_info, status, var->type->get_location(), "%s has dimension(s) [%s]",
+				full_type->str().c_str(),
+				join_with(member_index, ", ", [] (std::pair<std::string, int> index) -> std::string {
+					return std::string(C_ID) + index.first + C_RESET;
+					}).c_str());
+	}
+
+	assert(!status);
+	return nullptr;
+}
+
 bound_var_t::ref extract_member_variable(
 		status_t &status, 
 		llvm::IRBuilder<> &builder,
@@ -754,12 +835,10 @@ bound_var_t::ref extract_member_variable(
 	debug_above(5, log(log_info, "try to get outer struct from instance of type " c_type("%s"),
 				expansion->str().c_str()));
 	assert(!var->is_global());
+	auto bound_expansion_type = upsert_bound_type(status, builder, scope, expansion);
 	if (auto raw = dyncast<const types::type_ptr_t>(expansion)) {
 		auto bound_struct_type = upsert_bound_type(status, builder, scope, raw->element_type);
 		if (!!status) {
-			llvm::Value *llvm_var_value = var->resolve_value(builder);
-			assert(llvm_var_value->getType()->isPointerTy());
-
 			types::type_struct_t::ref struct_ = dyncast<const types::type_struct_t>(raw->element_type);
 
 			bool managed = false;
@@ -779,64 +858,14 @@ bound_var_t::ref extract_member_variable(
 			}
 
 			if (!!status) {
-				auto member_index = struct_->name_index;
-				auto member_index_iter = member_index.find(member_name);
-
-				for (auto member_index_pair : member_index) {
-					debug_above(5, log(log_info, "%s: %d", member_index_pair.first.c_str(),
-								member_index_pair.second));
-				}
-
-				if (member_index_iter != member_index.end()) {
-					auto index = member_index_iter->second;
-					debug_above(5, log(log_info, "found member " c_id("%s") " of type %s at index %d",
-								member_name.c_str(),
-								var->type->str().c_str(), index));
-
-					/* get the type of the dimension being referenced */
-					bound_type_t::ref member_type = scope->get_bound_type(
-							struct_->dimensions[index]->get_signature());
-
-					debug_above(5, log(log_info, "looking at bound_var %s : %s",
-								var->str().c_str(),
-								llvm_print(var->type->get_llvm_type()).c_str()));
-
-					/* the following code is heavily coupled to the physical layout of
-					 * managed vs. native structures */
-
-					/* GEP and load the member value from the structure */
-					llvm::Value *llvm_gep = llvm_make_gep(builder,
-							llvm_var_value, index, managed);
-					if (llvm_gep->getName().str().size() == 0) {
-						llvm_gep->setName(string_format("address_of.%s", member_name.c_str()));
-					}
-
-					llvm::Value *llvm_item = builder.CreateLoad(llvm_gep);
-
-					/* add a helpful descriptive name to this local value */
-					auto value_name = string_format(".%s", member_name.c_str());
-					llvm_item->setName(value_name);
-
-					return bound_var_t::create(
-							INTERNAL_LOC(),
-						   	value_name,
-							member_id->get_location(),
-							member_type,
-						   	llvm_item,
-						   	false /*is_lhs*/,
-							false /*is_global*/);
-				} else {
-					auto full_type = var->type->get_type()->rebind({});
-					user_error(status, node->get_location(),
-							"%s has no dimension called " c_id("%s"),
-							full_type->str().c_str(),
-							member_name.c_str());
-					user_message(log_info, status, var->type->get_location(), "%s has dimension(s) [%s]",
-							full_type->str().c_str(),
-							join_with(member_index, ", ", [] (std::pair<std::string, int> index) -> std::string {
-								return std::string(C_ID) + index.first + C_RESET;
-								}).c_str());
-				}
+				return extract_member_core(
+						status,
+					   	builder,
+					   	scope,
+					   	var,
+						member_id->get_location(),
+					   	struct_,
+						member_name, bound_expansion_type, managed);
 			}
 		}
 	} else {
