@@ -3,8 +3,8 @@ module _
 
 link module posix
 
-tag True
-tag False
+type True tag
+type False tag
 
 type bool is {
 	True
