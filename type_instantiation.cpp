@@ -158,14 +158,20 @@ void ast::tag_t::register_type(
 	/* it's a nullary enumeration or "tag", let's create a global value to
 	 * represent this tag. */
 
-	/* start by making a type for the tag */
-	bound_type_t::ref bound_tag_type = bound_type_t::create(
-			tag_type,
-			token.location,
-			/* all tags use the var_t* type */
-			scope->get_program_scope()->get_bound_type({"__var_ref"})->get_llvm_type());
+	bound_type_t::ref bound_tag_type = scope->get_program_scope()->get_bound_type(
+			tag_type->get_signature());
 
-	scope->get_program_scope()->put_bound_type(status, bound_tag_type);
+	if (bound_tag_type == nullptr) {
+		/* only once: make an empty type for all tags */
+		bound_tag_type = bound_type_t::create(
+				tag_type,
+				token.location,
+				/* all tags use the var_t* type */
+				scope->get_program_scope()->get_bound_type({"__var_ref"})->get_llvm_type());
+
+		scope->get_program_scope()->put_bound_type(status, bound_tag_type);
+	}
+
 	if (!!status) {
 		bound_var_t::ref tag = llvm_create_global_tag(
 				builder, scope, bound_tag_type, tag_name,

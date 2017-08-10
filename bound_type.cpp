@@ -189,6 +189,9 @@ bool bound_type_t::is_module() const {
 
 bool bound_type_t::is_managed_ptr(scope_t::ref scope) const {
 	bool res = types::is_managed_ptr(type, scope->get_typename_env());
+	debug_above(7, log("checking whether %s is a managed ptr: %s",
+				type->str().c_str(),
+				res ? c_good("it is") : c_error("it isn't")));
 
 	/* get the memory management structure type */
 	auto var = scope->get_bound_type("__var");
