@@ -546,6 +546,7 @@ void program_scope_t::put_bound_type(status_t &status, bound_type_t::ref type) {
 				type->str().c_str());
 		user_error(status, iter->second->get_location(), "type %s was declared here",
 				iter->second->str().c_str());
+		dbg();
 	}
 }
 
