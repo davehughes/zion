@@ -206,7 +206,6 @@ bool bound_type_t::is_managed_ptr(scope_t::ref scope) const {
 				 * need runtime type information to decipher, or it's a concrete
 				 * static managed type (or not). */
 				if (var->get_llvm_type() != llvm_struct_type) {
-					/* this should be some concrete managed type */
 					auto &elems = llvm_struct_type->elements();
 					assert_implies(res, elems.size() == 2);
 					if (elems.size() != 2 || var->get_llvm_specific_type() != elems[0]) {

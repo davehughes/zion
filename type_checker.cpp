@@ -1347,21 +1347,11 @@ bound_var_t::ref call_typeid(
 				resolved_value->type->str().c_str()));
 	auto program_scope = scope->get_program_scope();
 
-	auto llvm_type = resolved_value->type->get_llvm_specific_type();
-	auto llvm_obj_type = program_scope->get_bound_type({"__var"})->get_llvm_type();
-	bool is_obj = false;
-
-	if (llvm_type->isPointerTy()) {
-		if (auto llvm_struct = llvm::dyn_cast<llvm::StructType>(llvm_type->getPointerElementType())) {
-			is_obj = (
-					llvm_struct == llvm_obj_type ||
-				   	llvm_struct->getStructElementType(0) == llvm_obj_type);
-		}
-	}
+	bool is_managed_ptr = resolved_value->type->is_managed_ptr(scope);
 
 	auto name = string_format("typeid(%s)", resolved_value->str().c_str());
 
-	if (is_obj) {
+	if (is_managed_ptr) {
 		auto get_typeid_function = program_scope->get_bound_variable(status,
 				callsite->get_location(), "__get_var_type_id");
 		if (!!status) {

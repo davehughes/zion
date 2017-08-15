@@ -733,6 +733,11 @@ namespace types {
 				return true;
 			}
 		}
+
+		if (auto ptr_type = dyncast<const types::type_sum_t>(type)) {
+			/* sum types are always managed pointers for now */
+			return true;
+		}
 		return false;
 	}
 }
