@@ -37,8 +37,8 @@ foreach(_rt_module
 
 	add_custom_command(
 		OUTPUT ${_rt_module}.llir
-		COMMAND clang -S -Wall -emit-llvm ${option_flags} ${PROJECT_SOURCE_DIR}/${_rt_module}.c -o ${_rt_module}.llir
-		DEPENDS ${_rt_module}.c)
+		COMMAND clang -S -Wall -emit-llvm ${option_flags} ${PROJECT_SOURCE_DIR}/src/${_rt_module}.c -o ${_rt_module}.llir
+		DEPENDS ${PROJECT_SOURCE_DIR}/src/${_rt_module}.c)
 
 endforeach(_rt_module)
 
@@ -48,44 +48,44 @@ add_executable(llz
 	rt_ref.llir
 	rt_str.llir
 	rt_typeid.llir
-	ast.cpp
-	atom.cpp
-	bound_type.cpp
-	bound_var.cpp
-	callable.cpp
-	compiler.cpp
-	dbg.cpp
-	disk.cpp
-	identifier.cpp
-	json.cpp
-	json_lexer.cpp
-	json_parser.cpp
-	lexer.cpp
-	life.cpp
-	llvm_test.cpp
-	llvm_types.cpp
-	llvm_utils.cpp
-	location.cpp
-	logger.cpp
-	main.cpp
-	mmap_file.cpp
-	parse_state.cpp
-	parser.cpp
-	patterns.cpp
-	phase_scope_setup.cpp
-	scopes.cpp
-	status.cpp
-	tests.cpp
-	token.cpp
-	type_checker.cpp
-	type_instantiation.cpp
-	types.cpp
-	unchecked_type.cpp
-	unchecked_var.cpp
-	unification.cpp
-	utils.cpp
-	var.cpp
-	variant.cpp
+	src/ast.cpp
+	src/atom.cpp
+	src/bound_type.cpp
+	src/bound_var.cpp
+	src/callable.cpp
+	src/compiler.cpp
+	src/dbg.cpp
+	src/disk.cpp
+	src/identifier.cpp
+	src/json.cpp
+	src/json_lexer.cpp
+	src/json_parser.cpp
+	src/lexer.cpp
+	src/life.cpp
+	src/llvm_test.cpp
+	src/llvm_types.cpp
+	src/llvm_utils.cpp
+	src/location.cpp
+	src/logger.cpp
+	src/main.cpp
+	src/mmap_file.cpp
+	src/parse_state.cpp
+	src/parser.cpp
+	src/patterns.cpp
+	src/phase_scope_setup.cpp
+	src/scopes.cpp
+	src/status.cpp
+	src/tests.cpp
+	src/token.cpp
+	src/type_checker.cpp
+	src/type_instantiation.cpp
+	src/types.cpp
+	src/unchecked_type.cpp
+	src/unchecked_var.cpp
+	src/unification.cpp
+	src/utils.cpp
+	src/var.cpp
+	src/variant.cpp
 	)
 
 # Find the libraries that correspond to the LLVM components
