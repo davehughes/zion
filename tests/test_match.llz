@@ -1,0 +1,43 @@
+module _
+# test: pass
+
+link module posix
+
+type int has {
+	raw __int__
+}
+
+type float has {
+	raw __float__
+}
+
+type bool has {
+	raw __bool__
+}
+
+type many_types is {
+	int float bool
+}
+
+fn truthy(x many_types) __bool__ {
+	match x {
+		int: {
+			call puts("int found")
+			return call __ineq__(x.raw, 0)
+		}
+		float: {
+				   call puts("float found")
+					   return call __ineq__(x.raw, 0.0)
+			   }
+		bool: {
+			call puts("bool found")
+			return x.raw
+		}
+	}
+	return __false__
+}
+
+fn main() {
+	const y = call float(3.33)
+	call truthy(y)
+}
