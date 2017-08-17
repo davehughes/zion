@@ -1,0 +1,23 @@
+module _
+# test: pass
+
+type int has {
+	raw __int__
+}
+
+fn __lt__(lhs int, rhs __int__) __bool__ {
+	return __lt__(lhs.raw, rhs)
+}
+
+fn myabs(x int) int {
+	if __lt__(x, 0) {
+		# for now the minus operator/function needs to be binary
+		return __negative__(x)
+	} else {
+		return x
+	}
+}
+
+fn main() {
+	myabs(__negative__(3))
+}

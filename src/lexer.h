@@ -15,7 +15,7 @@ public:
 	lexer_t(std::string filename, std::istream &is);
 	~lexer_t();
 
-	void get_token(status_t &status, token_t &token, std::vector<token_t> *comments);
+	void get_token(status_t &status, bool &newline, token_t &token, std::vector<token_t> *comments);
 
 private:
 	void reset_token();

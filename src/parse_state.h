@@ -25,6 +25,7 @@ struct parse_state_t {
 	void warning(const char *format, ...);
 	void error(const char *format, ...);
 
+	bool line_broke() const;
 	token_t token;
 	token_t prior_token;
 	std::string filename;

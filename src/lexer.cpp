@@ -60,6 +60,7 @@ void advance_line_col(char ch, int &line, int &col);
 
 void lexer_t::get_token(
 		status_t &status,
+		bool &newline,
 		token_t &token,
 		std::vector<token_t> *comments)
 {
@@ -83,6 +84,8 @@ void lexer_t::get_token(
 		gts_expon_symbol,
 		gts_comment,
 	};
+
+	newline = false;
 
 l_begin:
 	gt_state gts = gts_start;
@@ -144,9 +147,11 @@ l_begin:
 				break;
 			case '\r':
 				gts = gts_whitespace;
+				newline = true;
 				break;
 			case '\n':
 				gts = gts_whitespace;
+				newline = true;
 				break;
 			case '\t':
 				gts = gts_whitespace;
