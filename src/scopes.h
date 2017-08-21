@@ -311,6 +311,7 @@ void scope_impl_t<T>::put_typename(
 		}
 	}
 #endif
+	assert(!dyncast<const types::type_maybe_t>(expansion));
 
 	if (typename_env.find(type_name) == typename_env.end()) {
 		if (auto parent_scope = get_parent_scope()) {

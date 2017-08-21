@@ -36,6 +36,7 @@ public:
 	bool is_void() const;
 	bool is_maybe() const;
 	bool is_managed_ptr(ptr<scope_t> scope) const;
+	bool is_ptr(ptr<scope_t> scope) const;
     bool is_module() const;
 	std::string get_signature() const;
 

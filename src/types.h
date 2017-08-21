@@ -62,6 +62,7 @@ namespace types {
 
 	bool is_type_id(type_t::ref type, std::string type_name);
 	bool is_managed_ptr(types::type_t::ref type, types::type_t::map env);
+	bool is_ptr(types::type_t::ref type, types::type_t::map env);
 
 	struct type_id_t : public type_t {
 		type_id_t(identifier::ref id);

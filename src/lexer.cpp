@@ -121,6 +121,10 @@ l_begin:
 			sequence_length = 0;
 
 			switch (ch) {
+			case '|':
+				gts = gts_end;
+				tk = tk_or;
+				break;
 			case '*':
 				gts = gts_end;
 				tk = tk_star;

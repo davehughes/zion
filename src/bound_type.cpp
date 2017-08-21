@@ -187,6 +187,16 @@ bool bound_type_t::is_module() const {
 	return types::is_type_id(get_type(), "module");
 }
 
+bool bound_type_t::is_ptr(scope_t::ref scope) const {
+	bool res = types::is_ptr(type, scope->get_typename_env());
+	debug_above(7, log("checking whether %s is a ptr of some kind: %s",
+				type->str().c_str(),
+				res ? c_good("it is") : c_error("it isn't")));
+
+	assert(!!res == !!llvm::dyn_cast<llvm::PointerType>(get_llvm_specific_type()));
+	return res;
+}
+
 bool bound_type_t::is_managed_ptr(scope_t::ref scope) const {
 	bool res = types::is_managed_ptr(type, scope->get_typename_env());
 	debug_above(7, log("checking whether %s is a managed ptr: %s",
@@ -213,7 +223,11 @@ bool bound_type_t::is_managed_ptr(scope_t::ref scope) const {
 						dbg();
 					}
 				}
+			} else {
+				assert(false);
 			}
+		} else {
+			assert(false);
 		}
 	}
 

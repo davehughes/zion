@@ -2234,112 +2234,103 @@ void ast::if_block_t::resolve_statement(
 	auto cond_life = life->new_life(status, lf_statement);
 
 	/* evaluate the condition for branching */
-	condition_value = condition->resolve_expression(
-			status, builder, scope, cond_life);
+	condition_value = condition->resolve_expression(status, builder, scope, cond_life);
 
-	if (!!status) {
-		/* if the condition value is a maybe type, then we'll need multiple
-		 * anded conditions to be true in order to actuall fall into the then
-		 * block, let's figure out those conditions */
-		llvm::Value *llvm_raw_condition_value = get_raw_condition_value(status,
-				builder, scope, condition, condition_value);
+	if (!status) { return; }
 
-		if (!!status && llvm_raw_condition_value != nullptr) {
-			/* test that the if statement doesn't return */
-			llvm::Function *llvm_function_current = llvm_get_function(builder);
+	llvm::Value *llvm_raw_condition_value = get_raw_condition_value(status,
+			builder, scope, condition, condition_value);
 
-			/* generate some new blocks */
-			llvm::BasicBlock *then_bb = llvm::BasicBlock::Create(builder.getContext(), "then", llvm_function_current);
+	if (!status) { return; }
 
-			/* we have to keep track of whether we need a merge block
-			 * because our nested branches could all return */
-			bool insert_merge_bb = false;
+	if (condition_value->is_maybe() && dyncast<const ast::reference_expr_t>(condition)) {
+		/* we can rebind this condition as non-null... */
+	}
 
-			llvm::BasicBlock *else_bb = llvm::BasicBlock::Create(builder.getContext(), "else", llvm_function_current);
+	/* test that the if statement doesn't return */
+	llvm::Function *llvm_function_current = llvm_get_function(builder);
 
-			/* put the merge block after the else block */
-			llvm::BasicBlock *merge_bb = llvm::BasicBlock::Create(builder.getContext(), "ifcont");
+	/* generate some new blocks */
+	llvm::BasicBlock *then_bb = llvm::BasicBlock::Create(builder.getContext(), "then", llvm_function_current);
 
-			/* create the actual branch instruction */
-			llvm_create_if_branch(status, builder, scope, IFF_ELSE, cond_life,
-					llvm_raw_condition_value, then_bb, else_bb);
+	/* we have to keep track of whether we need a merge block
+	 * because our nested branches could all return */
+	bool insert_merge_bb = false;
 
-			if (!!status) {
-				builder.SetInsertPoint(else_bb);
+	llvm::BasicBlock *else_bb = llvm::BasicBlock::Create(builder.getContext(), "else", llvm_function_current);
 
-				if (else_ != nullptr) {
-					else_->resolve_statement(status, builder, scope, life,
-							nullptr, &else_block_returns);
-				}
+	/* put the merge block after the else block */
+	llvm::BasicBlock *merge_bb = llvm::BasicBlock::Create(builder.getContext(), "ifcont");
 
-				if (!else_block_returns) {
-					/* keep track of the fact that we have to have a
-					 * merged block to land in after the else block */
-					insert_merge_bb = true;
+	/* create the actual branch instruction */
+	llvm_create_if_branch(status, builder, scope, IFF_ELSE, cond_life, llvm_raw_condition_value, then_bb, else_bb);
 
-					/* go ahead and jump there */
-					if (!builder.GetInsertBlock()->getTerminator()) {
-						builder.CreateBr(merge_bb);
-					}
-				}
+	if (!status) { return; }
 
-				if (!!status) {
-					/* let's generate code for the "then" block */
-					builder.SetInsertPoint(then_bb);
-					llvm::Value *llvm_bool_overload_value = maybe_get_bool_overload_value(status,
-							builder, scope, cond_life, condition, condition_value);
+	builder.SetInsertPoint(else_bb);
 
-					if (!!status) {
-						if (llvm_bool_overload_value != nullptr) {
-							/* we've got a second condition to check, let's do it */
-							auto deep_then_bb = llvm::BasicBlock::Create(builder.getContext(), "deep-then", llvm_function_current);
+	if (else_ != nullptr) {
+		else_->resolve_statement(status, builder, scope, life, nullptr, &else_block_returns);
+	}
 
-							llvm_create_if_branch(status, builder, scope,
-									IFF_THEN | IFF_ELSE, cond_life,
-									llvm_bool_overload_value, deep_then_bb,
-									else_bb ? else_bb : merge_bb);
-							builder.SetInsertPoint(deep_then_bb);
-						} else {
-							cond_life->release_vars(status, builder, scope, lf_statement);
-						}
+	if (!else_block_returns) {
+		/* keep track of the fact that we have to have a
+		 * merged block to land in after the else block */
+		insert_merge_bb = true;
 
-						if (!!status) {
-							block->resolve_statement(status, builder,
-									if_scope ? if_scope : scope, life, nullptr, &if_block_returns);
-
-							if (!!status) {
-								if (!if_block_returns) {
-									insert_merge_bb = true;
-									if (!builder.GetInsertBlock()->getTerminator()) {
-										builder.CreateBr(merge_bb);
-									}
-									builder.SetInsertPoint(merge_bb);
-								}
-
-								if (insert_merge_bb) {
-									/* we know we'll need to fall through to the merge
-									 * block, let's add it to the end of the function
-									 * and let's set it as the next insert point. */
-									llvm_function_current->getBasicBlockList().push_back(merge_bb);
-									builder.SetInsertPoint(merge_bb);
-
-								}
-
-								/* track whether the branches return */
-								*returns |= (if_block_returns && else_block_returns);
-
-								assert(!!status);
-								return;
-							}
-						}
-					}
-				}
-			}
+		/* go ahead and jump there */
+		if (!builder.GetInsertBlock()->getTerminator()) {
+			builder.CreateBr(merge_bb);
 		}
 	}
 
-	assert(!status);
-    return;
+	if (!status) { return; }
+
+	/* let's generate code for the "then" block */
+	builder.SetInsertPoint(then_bb);
+	llvm::Value *llvm_bool_overload_value = maybe_get_bool_overload_value(status, builder, scope, cond_life, condition, condition_value);
+
+	if (!status) { return; }
+
+	if (llvm_bool_overload_value != nullptr) {
+		/* we've got a second condition to check, let's do it */
+		auto deep_then_bb = llvm::BasicBlock::Create(builder.getContext(), "deep-then", llvm_function_current);
+
+		llvm_create_if_branch(status, builder, scope, IFF_THEN | IFF_ELSE, cond_life,
+				llvm_bool_overload_value, deep_then_bb, else_bb ? else_bb : merge_bb);
+		builder.SetInsertPoint(deep_then_bb);
+	} else {
+		cond_life->release_vars(status, builder, scope, lf_statement);
+	}
+
+	if (!status) { return; }
+
+	block->resolve_statement(status, builder, if_scope ? if_scope : scope, life, nullptr, &if_block_returns);
+
+	if (!status) { return; }
+
+	if (!if_block_returns) {
+		insert_merge_bb = true;
+		if (!builder.GetInsertBlock()->getTerminator()) {
+			builder.CreateBr(merge_bb);
+		}
+		builder.SetInsertPoint(merge_bb);
+	}
+
+	if (insert_merge_bb) {
+		/* we know we'll need to fall through to the merge
+		 * block, let's add it to the end of the function
+		 * and let's set it as the next insert point. */
+		llvm_function_current->getBasicBlockList().push_back(merge_bb);
+		builder.SetInsertPoint(merge_bb);
+
+	}
+
+	/* track whether the branches return */
+	*returns |= (if_block_returns && else_block_returns);
+
+	assert(!!status);
+	return;
 }
 
 void ast::var_decl_t::resolve_statement(

@@ -1,12 +1,12 @@
 integer        ::= '-'? [1-9] [0-9]*
 identifier     ::= [a-zA-Z_][_a-zA-Z0-9]* | ( "'" [^']+ "'" )
 
-type_def       ::=
-   'type' identifier ( ( 'struct'   '{' ( identifier type_expr )+ '}' )
-                     | ( 'polymorph '{'   identifier+             '}' ) )
+type_def       ::= 'type' identifier type_ref
+type_instance  ::= ( ( 'struct'    '{' ( identifier type_ref )+ '}' )
+                   | ( 'polymorph' '{'   identifier+            '}' ))
+type_ref       ::= ( ( type_instance | identifier ) '?'? ) | (( '^' | '*' ) type_ref )
 
-type_expr      ::= ( ( ( '^' | '*' ) type_expr ) | identifier )
-function_decl  ::= 'fn' identifier? '(' ( identifier type_expr ( ',' identifier type_expr )* )? ')' type_expr
+function_decl  ::= 'fn' identifier? '(' ( identifier type_ref ( ',' identifier type_ref )* )? ')' type_expr
 function       ::= function_decl block
 
 block          ::= '{' statement* '}'
@@ -21,19 +21,18 @@ statement      ::=
  | 'break'
 
 if_statement ::= 'if' expression block 'else' ( block | if_statement )
-callsite     ::= 'call' expression '(' ( expression ( ',' expression )* )? ')'
+callsite     ::= expression '(' ( expression ( ',' expression )* )? ')'
 
 /* Expressions are autoreleased if the type obeys */
 expression ::=
    literal
  | ref_expr
  | callsite
+ | ( '(' expression ')' )
  | ( 'if' 'expression' 'then' 'expression' 'else' 'expression' )
  | ( 'let' '{' statement* 'in' expression '}' )
 
-ref_expr       ::= identifier ( '.' identifier )*
 literal        ::= integer | string | boolean | float | 'nil' type_expr | '&' expression
-
 module         ::= ( module_decl (link_module | link_function)* (type_def | function)* )
 module_decl    ::= 'module' identifier
 link_module    ::= 'link' filename

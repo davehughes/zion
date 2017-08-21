@@ -30,6 +30,7 @@ const char *tkstr(token_kind_t tk) {
 	tk_case(integer);
 	tk_case(none);
 	tk_case(string);
+	case tk_or: return "|";
 	case tk_lcurly: return "{";
 	case tk_rcurly: return "}";
 	case tk_lparen: return "(";
@@ -51,6 +52,9 @@ void token_t::emit(int &indent_level, token_kind_t &last_tk, bool &indented_line
 	   	break;
 	case tk_assign:
 		printf("=");
+		break;
+	case tk_or:
+		printf("|");
 		break;
 	case tk_comment:
 		printf("# %s\n", text.c_str());

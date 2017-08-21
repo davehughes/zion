@@ -373,7 +373,7 @@ namespace ast {
 				local_scope_t::ref *new_scope,
 				bool *returns) const;
 
-		ptr<const reference_expr_t> condition;
+		ptr<const expression_t> condition;
 		ptr<const block_t> block;
 		ptr<const statement_t> else_;
 	};

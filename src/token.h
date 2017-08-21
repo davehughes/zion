@@ -15,6 +15,7 @@ enum token_kind_t {
 	tk_lparen, /* ( */
 	tk_rparen, /* ) */
 	tk_comma, /* , */
+	tk_or, /* | */
 	tk_lcurly, /* { */
 	tk_rcurly, /* } */
 	tk_lsquare, /* [ */
@@ -60,6 +61,7 @@ const char * const K_type = "type";
 const char * const K_has = "has";
 const char * const K_is = "is";
 const char * const K_tag = "tag";
+const char * const K_any = "any";
 #define K(x) K_##x
 
 struct token_t {

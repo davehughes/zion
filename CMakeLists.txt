@@ -79,6 +79,7 @@ add_executable(llz
 	src/token.cpp
 	src/type_checker.cpp
 	src/type_instantiation.cpp
+	src/type_parser.cpp
 	src/types.cpp
 	src/unchecked_type.cpp
 	src/unchecked_var.cpp

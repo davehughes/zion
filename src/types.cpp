@@ -419,7 +419,7 @@ namespace types {
 			return shared_from_this();
 		}
 
-		return ::type_ptr(element_type->rebind(bindings));
+		return ::type_managed(element_type->rebind(bindings));
 	}
 
 	location_t type_managed_t::get_location() const {
@@ -724,6 +724,10 @@ namespace types {
 	}
 
 	bool is_managed_ptr(types::type_t::ref type, types::type_t::map env) {
+		if (auto maybe_type = dyncast<const types::type_maybe_t>(type)) {
+			type = maybe_type->just;
+		}
+
 		if (auto expanded_type = eval(type, env)) {
 			type = expanded_type;
 		}
@@ -732,6 +736,26 @@ namespace types {
 			if (dyncast<const types::type_managed_t>(ptr_type->element_type)) {
 				return true;
 			}
+		}
+
+		if (auto ptr_type = dyncast<const types::type_sum_t>(type)) {
+			/* sum types are always managed pointers for now */
+			return true;
+		}
+		return false;
+	}
+
+	bool is_ptr(types::type_t::ref type, types::type_t::map env) {
+		if (auto maybe_type = dyncast<const types::type_maybe_t>(type)) {
+			type = maybe_type->just;
+		}
+
+		if (auto expanded_type = eval(type, env)) {
+			type = expanded_type;
+		}
+
+		if (auto ptr_type = dyncast<const types::type_ptr_t>(type)) {
+			return true;
 		}
 
 		if (auto ptr_type = dyncast<const types::type_sum_t>(type)) {
@@ -960,6 +984,8 @@ types::type_t::ref eval(types::type_t::ref type, types::type_t::map env) {
 		return eval_id(id, env);
 	} else if (auto operator_ = dyncast<const types::type_operator_t>(type)) {
 		return eval_apply(operator_->oper, operator_->operand, env);
+	} else if (auto maybe = dyncast<const types::type_maybe_t>(type)) {
+		return type_maybe(eval(maybe->just, env));
 	} else if (auto raw = dyncast<const types::type_raw_pointer_t>(type)) {
 		auto evaled = eval(raw->raw, env);
 		if (evaled != nullptr) {

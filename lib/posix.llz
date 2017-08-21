@@ -1,6 +1,7 @@
 module posix
 
 link fn puts(x __str__) __int__
+link fn putchar(x __int__) __int__
 link fn open(path __str__, oflag __int__) __int__
 link fn close(fd __int__) __int__
 link fn read(fileds __int__, buf __bytes, nbytes __int__) __int__

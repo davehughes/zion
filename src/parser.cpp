@@ -12,50 +12,6 @@
 using namespace ast;
 
 
-#define eat_token_or_return(fail_code) \
-	do { \
-		debug_lexer(log(log_info, "eating a %s", tkstr(ps.token.tk))); \
-		ps.advance(); \
-	} while (0)
-
-#define eat_token() eat_token_or_return(nullptr)
-
-#define expect_token_or_return(_tk, fail_code) \
-	do { \
-		if (ps.token.tk != _tk) { \
-			ps.error("expected '%s', got '%s' at %s:%d", \
-				   	tkstr(_tk), tkstr(ps.token.tk), \
-					__FILE__, __LINE__); \
-			/* dbg(); */ \
-			return fail_code; \
-		} \
-	} while (0)
-
-#define expect_token(_tk) expect_token_or_return(_tk, nullptr)
-
-#define chomp_token_or_return(_tk, fail_code) \
-	do { \
-		expect_token_or_return(_tk, fail_code); \
-		eat_token_or_return(fail_code); \
-	} while (0)
-#define chomp_token(_tk) chomp_token_or_return(_tk, nullptr)
-#define chomp_ident(ident) \
-	do { \
-		expect_ident(ident); \
-		ps.advance(); \
-	} while (0)
-
-#define expect_ident(ident) \
-	do { \
-		if (ps.token.tk != tk_identifier || ps.token.text != ident) { \
-			ps.error("expected '%s', got '%s' at %s:%d", \
-					ident, ps.token.text.c_str(), \
-					__FILE__, __LINE__); \
-			return nullptr; \
-		} \
-	} while (0)
-
-
 ptr<const var_decl_t> var_decl_t::parse(parse_state_t &ps) {
 	bool constant = ps.token.is_ident(K(const));
 	ps.advance();
@@ -393,14 +349,9 @@ ptr<const block_t> block_t::parse(parse_state_t &ps) {
 
 ptr<const if_block_t> if_block_t::parse(parse_state_t &ps) {
 	auto if_block = create<ast::if_block_t>(ps.token);
-	if (ps.token.is_ident(K(if))) {
-		ps.advance();
-	} else {
-		ps.error("expected if or elif");
-		return nullptr;
-	}
+	chomp_ident(K(if));
 
-	auto condition = reference_expr_t::parse(ps);
+	auto condition = expression_t::parse(ps);
 	if (!!ps.status) {
 		if_block->condition = condition;
 		auto block = block_t::parse(ps);
@@ -711,33 +662,6 @@ struct_t::ref struct_t::parse(parse_state_t &ps, token_t type_name) {
 
 	assert(!ps.status);
 	return nullptr;
-}
-
-types::type_t::ref parse_type_ref(parse_state_t &ps) {
-	std::list<token_kind_t> tks;
-	while (ps.token.tk == tk_hat || ps.token.tk == tk_star) {
-		tks.push_back(ps.token.tk);
-		ps.advance();
-	}
-
-	if (ps.token.tk == tk_identifier) {
-		auto token = ps.token;
-		ps.advance();
-		auto type = type_id(make_code_id(token));
-		for (auto tk : tks) {
-			switch (tk) {
-			case tk_star:
-				type = type_ptr(type);
-				break;
-			default:
-				break;
-			}
-		}
-		return type;
-	} else {
-		ps.error("invalid type: expected an identifier (got %s)", ps.token.text.c_str());
-		return nullptr;
-	}
 }
 
 dimension_t::ref dimension_t::parse(parse_state_t &ps) {

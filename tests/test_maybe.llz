@@ -1,0 +1,17 @@
+module _
+# test: pass
+link module posix
+
+type int has {
+	raw __int__
+}
+
+fn do(t int?) void {
+	if t {
+		call putchar(t)
+	}
+}
+
+fn main() {
+	call do(call int(3))
+}
