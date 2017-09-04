@@ -13,6 +13,8 @@ bool test_llvm_builder() {
 	llvm::Function *mainFunc = llvm::Function::Create(
 			funcType, llvm::Function::ExternalLinkage, "main", module);
 
+	mainFunc->setGC("foo");
+	mainFunc->setDoesNotThrow();
 	llvm::BasicBlock *entry = llvm::BasicBlock::Create(context, "entrypoint", mainFunc);
 	builder.SetInsertPoint(entry);
 

@@ -5,8 +5,7 @@ include_directories(BEFORE .)
 add_definitions(-DZION_DEBUG)
 
 find_package(LLVM REQUIRED CONFIG
-	HINTS /usr/local/Cellar/llvm/3.9.1
-	HINTS /usr/local/Cellar/llvm@3.7/3.7.1/lib/llvm-3.7)
+	HINTS /usr/local/Cellar/llvm/4.0.1)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -92,12 +91,16 @@ add_executable(zionc
 	variant.cpp
 	)
 
+set(LLVM_LINK_COMPONENTS all)
+
 # Find the libraries that correspond to the LLVM components
 # that we wish to use
-llvm_map_components_to_libnames(llvm_libs support core irreader mcjit)
+# execute_process(COMMAND llvm-config --components | tr ' ' '\n' OUTPUT_VARIABLE COMPONENTS)
+# llvm_map_components_to_libnames(llvm_libs engine support core irreader jit mc mcjit codegen asmparser linker)
+#engine) # llvm_libs ${COMPONENTS})
 
 # Link against LLVM libraries
-target_link_libraries(zionc ${llvm_libs})
+# target_link_libraries(zionc ${llvm_libs})
 
 enable_testing()
 

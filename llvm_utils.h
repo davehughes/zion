@@ -7,6 +7,8 @@
 
 #define DTOR_INDEX 5
 
+extern const char *GC_STRATEGY;
+
 struct compiler_t;
 struct status_t;
 struct life_t;
@@ -34,6 +36,7 @@ llvm::CallInst *llvm_create_call_inst(
 		ptr<const bound_var_t> callee,
 		std::vector<llvm::Value *> llvm_values);
 
+void llvm_init();
 llvm::Value *llvm_create_bool(llvm::IRBuilder<> &builder, bool value);
 llvm::Value *llvm_create_int(llvm::IRBuilder<> &builder, int64_t value);
 llvm::Value *llvm_create_int32(llvm::IRBuilder<> &builder, int32_t value);

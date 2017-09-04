@@ -59,6 +59,8 @@ int main(int argc, char *argv[]) {
 		return usage();
 	}
 
+	llvm_init();
+
 	if (cmd == "test") {
 		std::string filter = (argc == 3 ? argv[2] : "");
 		std::vector<std::string> excludes;
@@ -150,6 +152,21 @@ int main(int argc, char *argv[]) {
 				if (!!status) {
 					auto executable_filename = compiler.get_executable_filename();
 					int ret = compiler.emit_built_program(status, executable_filename);
+					if (!!status && !ret) {
+						return EXIT_SUCCESS;
+					} else {
+						return ret;
+					}
+				}
+			}
+			return EXIT_FAILURE;
+        } else if (cmd == "jit") {
+			compiler.build_parse_modules(status);
+
+			if (!!status) {
+				compiler.build_type_check_and_code_gen(status);
+				if (!!status) {
+					int ret = compiler.run_jit(status);
 					if (!!status && !ret) {
 						return EXIT_SUCCESS;
 					} else {

@@ -15,6 +15,11 @@
 #include <sys/stat.h>
 #include <iostream>
 
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+
 std::string strip_zion_extension(std::string module_name) {
 	if (ends_with(module_name, ".zion")) {
 		/* as a courtesy, strip the extension from the filename here */
@@ -783,6 +788,32 @@ int compiler_t::run_program(std::string bitcode_filename) {
 	ss << "lli-3.7 " << bitcode_filename;
 	debug_above(1, log(log_info, "running %s...", ss.str().c_str()));
 	return system(ss.str().c_str());
+}
+
+int compiler_t::run_jit(status_t &status) {
+	using namespace llvm;
+
+	InitializeAllTargetInfos();
+	InitializeAllTargets();
+	InitializeAllTargetMCs();
+	InitializeAllAsmParsers();
+	InitializeAllAsmPrinters();
+
+	auto TargetTriple = llvm::sys::getDefaultTargetTriple();
+	auto llvm_module = llvm_get_program_module();
+	llvm_module->setTargetTriple(TargetTriple);
+
+	std::string error_msg;
+	auto Target = TargetRegistry::lookupTarget(TargetTriple, error_msg);
+
+	// Print an error and exit if we couldn't find the requested target.
+	// This generally occurs if we've forgotten to initialise the
+	// TargetRegistry or we have a bogus target triple.
+	if (!Target) {
+		llvm::errs() << error_msg;
+		return 1;
+	}
+	return -1;
 }
 
 std::unique_ptr<llvm::Module> &compiler_t::get_llvm_module(atom name) {
