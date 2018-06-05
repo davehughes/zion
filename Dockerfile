@@ -49,4 +49,9 @@ RUN \
 ENV ARC4RANDOM_LIB bsd
 ADD . /opt/zion
 WORKDIR /opt/zion
+RUN \
+    cd /opt/zion && \
+    make zion && \
+    cp zion /usr/local/bin
+
 CMD bash
